@@ -1,6 +1,6 @@
 import $ from 'jquery';
 
-// 注入炫彩流光动画 CSS
+// 1. 注入炫彩流光动画 CSS
 const rainbowStyle = `
 <style id="hydro-rainbow-style">
 @keyframes hydroRainbowFlow {
@@ -21,30 +21,33 @@ const rainbowStyle = `
 .hydro-rainbow-tag {
   display: inline-block;
   vertical-align: middle;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   padding: 2px 8px;
   margin-left: 8px;
   border-radius: 12px;
   background: linear-gradient(135deg, #ff007f, #7928ca);
-  color: #ffffff;
+  color: #ffffff !important;
   box-shadow: 0 2px 6px rgba(255, 0, 127, 0.3);
 }
 </style>
 `;
 
-$(() => {
-  // 1. 注入动画样式
+function injectRainbowStyle() {
   if (!$('#hydro-rainbow-style').length) {
     $('head').append(rainbowStyle);
   }
+}
 
-  // 2. 右上角用户下拉菜单追加「积分商城」
-  const $userDropdown = $('.nav__user .dropdown .menu, .user-nav .dropdown .menu, #user-dropdown .menu');
+// 2. 右上角用户下拉菜单追加「积分商城」
+function appendShopDropdownItem() {
+  // 定位 HydroOJ 顶部导航栏用户下拉菜单
+  const $userDropdown = $('a[href*="/setting"], a[href*="/logout"]').closest('.menu');
+  
   if ($userDropdown.length && !$userDropdown.find('a[href="/shop"]').length) {
     const shopItemHtml = `
       <a class="item" href="/shop">
-        <i class="shopping bag icon"></i> 积分商城
+        <span class="icon icon-shopping_bag"></span> 🛍️ 积分商城
       </a>
     `;
     const $target = $userDropdown.find('a[href*="setting"], a[href*="logout"]').first();
@@ -54,28 +57,46 @@ $(() => {
       $userDropdown.append(shopItemHtml);
     }
   }
+}
 
-  // 3. 检测是否在个人主页 (/user/:uid 或 /d/:domain/user/:uid)
+// 3. 个人主页渲染彩色用户名
+function applyColorNameEffect() {
+  // 匹配 /user/:uid 或 /d/:domain/user/:uid
   const userMatch = window.location.pathname.match(/\/user\/(\d+)/);
-  if (userMatch && userMatch[1]) {
-    const targetUid = parseInt(userMatch[1], 10);
+  if (!userMatch || !userMatch[1]) return;
 
-    // 请求后端查询当前用户的装扮特效
-    fetch(`/api/shop/user_effect?uid=${targetUid}`)
-      .then(res => res.json())
-      .then(data => {
-        if (data && data.isColorName) {
-          // 选中主页中的用户名标题元素
-          const $nameElem = $(
-            '.user-profile h1, .profile-header h1, h1.user-profile__header, .profile-name, h1.ui.header'
-          ).first();
+  const targetUid = parseInt(userMatch[1], 10);
 
-          if ($nameElem.length) {
-            $nameElem.addClass('hydro-rainbow-uname');
+  fetch(`/api/shop/user_effect?uid=${targetUid}`)
+    .then(res => res.json())
+    .then(data => {
+      if (data && data.isColorName) {
+        // 匹配 HydroOJ 个人主页 (user_detail.html) 标题元素
+        const $nameElem = $(
+          '[data-page="user_detail"] h1.section__title, .section__header h1, h1.section__title, .user-profile h1'
+        ).first();
+
+        if ($nameElem.length && !$nameElem.hasClass('hydro-rainbow-uname')) {
+          $nameElem.addClass('hydro-rainbow-uname');
+          if (!$nameElem.next('.hydro-rainbow-tag').length) {
             $nameElem.after('<span class="hydro-rainbow-tag">🌈 炫彩名</span>');
           }
         }
-      })
-      .catch(() => {});
-  }
+      }
+    })
+    .catch(() => {});
+}
+
+// 统一执行函数
+function run() {
+  injectRainbowStyle();
+  appendShopDropdownItem();
+  applyColorNameEffect();
+}
+
+// 挂载执行并监听 PJAX 页面切换
+$(() => {
+  run();
+  $(document).on('pjax:success pjax:end', run);
+  window.addEventListener('pjax:success', run);
 });
