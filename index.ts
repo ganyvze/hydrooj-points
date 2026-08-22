@@ -158,7 +158,7 @@ export function apply(ctx: Context) {
   ctx.injectUI(
     'UserDropdown',
     'shop_page',
-    { icon: 'shopping_bag', displayName: '积分商城' },
+    { icon: 'crown', displayName: '积分商城' },
     PRIV.PRIV_USER_PROFILE
   );
 
