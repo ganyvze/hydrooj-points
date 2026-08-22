@@ -12,7 +12,7 @@ const rainbowCSS = `
 /* 强力覆盖个人主页用户名及子元素 */
 .hydro-rainbow-uname,
 .hydro-rainbow-uname * {
-  background: linear-gradient(135deg, #ff007f, #7928ca, #0070f3, #00dfd8, #ff007f, #f59e0b) !important;
+  background: linear-gradient(135deg, #ef4444, #f59e0b, #10b981, #3b82f6, #ef4444) !important;
   background-size: 300% 300% !important;
   -webkit-background-clip: text !important;
   -webkit-text-fill-color: transparent !important;
