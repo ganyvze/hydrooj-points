@@ -345,6 +345,17 @@ body.dark {
   transition: background 0.2s ease;
 }
 .btn-close:hover { background: var(--shop-btn-close-hover); }
+
+/* 数字定格弹跳特效 */
+.pop-bounce {
+  animation: numPop 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+@keyframes numPop {
+  0% { transform: scale(0.9); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
 </style>
 
 <div class="shop-wrapper">
@@ -539,6 +550,50 @@ function closeModal() {
   document.getElementById('lottery-modal').style.display = 'none';
 }
 
+// 核心：数字平滑滚动缓动函数（从 +0 快速冲刺并缓动定格）
+function animateNumberRoll(targetNum, color, onFinish) {
+  const loadingDiv = document.getElementById('modal-loading');
+  const resultDiv = document.getElementById('modal-result');
+  const resPts = document.getElementById('res-points');
+
+  loadingDiv.style.display = 'none';
+  resultDiv.style.display = 'block';
+  resPts.style.color = color;
+  resPts.classList.remove('pop-bounce');
+
+  // 如果抽中 0 积分，直接展示
+  if (targetNum <= 0) {
+    resPts.innerText = '+0';
+    resPts.classList.add('pop-bounce');
+    if (onFinish) onFinish();
+    return;
+  }
+
+  const duration = 1200; // 滚动总时长 1.2 秒
+  const startTime = performance.now();
+
+  function step(currentTime) {
+    const elapsed = currentTime - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+
+    // 三次方缓出曲线 (easeOutCubic)：起步极快，后段逐渐减速到单个数字跳动
+    const easeProgress = 1 - Math.pow(1 - progress, 3);
+    const currentVal = Math.floor(easeProgress * targetNum);
+
+    resPts.innerText = '+' + currentVal;
+
+    if (progress < 1) {
+      requestAnimationFrame(step);
+    } else {
+      resPts.innerText = '+' + targetNum;
+      resPts.classList.add('pop-bounce'); // 最终数字定格弹跳
+      if (onFinish) onFinish();
+    }
+  }
+
+  requestAnimationFrame(step);
+}
+
 // 1. 开盲盒
 function handleOpenBox() {
   if (opening) return;
@@ -563,25 +618,49 @@ function handleOpenBox() {
     setTimeout(() => {
       if (data.error) {
         showModalResult('❌', '开启失败', data.error, '#ef4444');
-      } else {
-        document.getElementById('user-points-val').innerText = data.userPoints;
-        const reward = data.reward;
-        const tip = data.isDouble ? '【翻倍卡生效】' : '';
-
-        if (reward >= 888) {
-          showModalResult('🌟', '+' + reward, `${tip} 欧气大爆发！斩获超稀有大奖！`, '#f59e0b');
-        } else if (reward >= 199) {
-          showModalResult('✨', '+' + reward, `${tip} 运气不错，保本并小赚一笔！`, '#10b981');
-        } else if (reward > 0) {
-          showModalResult('💨', '+' + reward, `${tip} 回血一波，再接再厉！`, '#94a3b8');
-        } else {
-          showModalResult('💨', '+0', '空空如也，下次一定出金！', '#64748b');
-        }
+        opening = false;
+        btn.disabled = false;
+        btn.innerText = '立即开启盲盒';
+        return;
       }
-      opening = false;
-      btn.disabled = false;
-      btn.innerText = '立即开启盲盒';
-    }, 650);
+
+      // 更新页面余额
+      document.getElementById('user-points-val').innerText = data.userPoints;
+
+      const reward = data.reward;
+      const tip = data.isDouble ? '【翻倍卡生效】' : '';
+      
+      let icon = '💨';
+      let desc = '空空如也，下次一定出金！';
+      let color = '#64748b';
+
+      if (reward >= 888) {
+        icon = '🌟';
+        desc = `${tip} 欧气大爆发！斩获超稀有大奖！`;
+        color = '#f59e0b';
+      } else if (reward >= 199) {
+        icon = '✨';
+        desc = `${tip} 运气不错，保本并小赚一笔！`;
+        color = '#10b981';
+      } else if (reward > 0) {
+        icon = '🎁';
+        desc = `${tip} 回血一波，再接再厉！`;
+        color = '#6366f1';
+      }
+
+      // 切换为结算图标与状态
+      document.getElementById('res-icon').innerText = icon;
+      document.getElementById('res-desc').innerText = '正在结算奖励...';
+
+      // 启动从 +0 上涨到目标值的动画
+      animateNumberRoll(reward, color, () => {
+        document.getElementById('res-desc').innerText = desc;
+        opening = false;
+        btn.disabled = false;
+        btn.innerText = '立即开启盲盒';
+      });
+
+    }, 500);
   })
   .catch(() => {
     alert('网络异常，请重试');
