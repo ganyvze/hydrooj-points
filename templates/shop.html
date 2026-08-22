@@ -23,7 +23,6 @@
   --shop-banner-gradient: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
 }
 
-/* 适配 Hydro 官方暗色主题类名 (html.theme--dark) 与系统暗色偏好 */
 html.theme--dark,
 .theme--dark,
 [data-theme="dark"],
@@ -73,7 +72,7 @@ body.dark {
 
 /* ================= 2. 页面布局与卡片样式 ================= */
 .shop-wrapper {
-  max-width: 1040px;
+  max-width: 1080px;
   margin: 24px auto;
   padding: 0 16px 60px 16px;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -81,7 +80,6 @@ body.dark {
   transition: color 0.3s ease;
 }
 
-/* 顶部信息栏 */
 .shop-header {
   background: var(--shop-bg-card);
   border-radius: 16px;
@@ -126,15 +124,13 @@ body.dark {
   color: #f59e0b;
 }
 
-/* 商品网格 */
 .shop-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 20px;
   margin-top: 24px;
 }
 
-/* 扁平化商品卡片 */
 .product-card {
   background: var(--shop-bg-card);
   border-radius: 16px;
@@ -150,15 +146,14 @@ body.dark {
   box-shadow: 0 12px 20px rgba(0, 0, 0, 0.12);
 }
 .product-banner {
-  background: var(--shop-banner-gradient);
-  padding: 40px 0;
+  padding: 36px 0;
   display: flex;
   justify-content: center;
   align-items: center;
   position: relative;
 }
 .product-banner .icon {
-  font-size: 54px;
+  font-size: 50px;
   filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.15));
 }
 
@@ -168,71 +163,80 @@ body.dark {
 .banner-color-name {
   background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 50%, #06b6d4 100%);
 }
-.btn-buy.pink {
-  background: #db2777;
+.banner-double {
+  background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);
 }
-.btn-buy.pink:hover {
-  background: #be185d;
+.banner-solitude {
+  background: linear-gradient(135deg, #475569 0%, #0f172a 100%);
 }
 
 .product-tag {
   position: absolute;
-  top: 12px;
-  right: 12px;
-  background: rgba(255, 255, 255, 0.2);
+  top: 10px;
+  right: 10px;
+  background: rgba(255, 255, 255, 0.25);
   backdrop-filter: blur(4px);
   color: #ffffff;
   font-size: 11px;
   font-weight: 700;
-  padding: 4px 10px;
+  padding: 3px 8px;
   border-radius: 20px;
 }
 .product-body {
-  padding: 20px;
+  padding: 18px;
   flex-grow: 1;
   display: flex;
   flex-direction: column;
 }
 .product-name {
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 700;
   color: var(--shop-text-main);
   margin: 0;
 }
 .product-price {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
-  color: #ec4899;
   margin: 8px 0;
 }
+.price-pink { color: #ec4899; }
+.price-amber { color: #f59e0b; }
+.price-slate { color: #64748b; }
+.price-indigo { color: #6366f1; }
+
 .product-desc {
   font-size: 13px;
   color: var(--shop-text-sub);
-  line-height: 1.6;
+  line-height: 1.5;
   margin: 0 0 16px 0;
+  flex-grow: 1;
 }
 .btn-buy {
   width: 100%;
-  padding: 12px 0;
+  padding: 11px 0;
   background: #4f46e5;
   color: #ffffff;
   border: none;
   border-radius: 10px;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s ease, opacity 0.2s ease;
 }
-.btn-buy:hover {
-  background: #4338ca;
-}
+.btn-buy:hover { background: #4338ca; }
+.btn-buy.pink { background: #db2777; }
+.btn-buy.pink:hover { background: #be185d; }
+.btn-buy.amber { background: #d97706; }
+.btn-buy.amber:hover { background: #b45309; }
+.btn-buy.slate { background: #334155; }
+.btn-buy.slate:hover { background: #1e293b; }
 .btn-buy:disabled {
   background: #64748b;
   cursor: not-allowed;
   opacity: 0.6;
 }
 
-/* 概率说明卡片 */
+/* 规则卡片 */
 .rules-card {
   background: var(--shop-bg-card);
   border-radius: 16px;
@@ -281,7 +285,7 @@ body.dark {
 .badge-blue { background: var(--shop-badge-blue-bg); color: var(--shop-badge-blue-text); }
 .badge-gray { background: var(--shop-badge-gray-bg); color: var(--shop-badge-gray-text); }
 
-/* 独立弹窗 (Modal) */
+/* 弹窗 */
 .shop-modal-mask {
   display: none;
   position: fixed;
@@ -316,18 +320,17 @@ body.dark {
   animation: spin 0.8s linear infinite;
   margin: 0 auto 16px auto;
 }
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
+@keyframes spin { to { transform: rotate(360deg); } }
 .result-val {
-  font-size: 38px;
+  font-size: 28px;
   font-weight: 800;
   margin: 12px 0 6px 0;
 }
 .result-msg {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--shop-text-sub);
   margin-bottom: 24px;
+  line-height: 1.5;
 }
 .btn-close {
   width: 100%;
@@ -341,9 +344,7 @@ body.dark {
   cursor: pointer;
   transition: background 0.2s ease;
 }
-.btn-close:hover {
-  background: var(--shop-btn-close-hover);
-}
+.btn-close:hover { background: var(--shop-btn-close-hover); }
 </style>
 
 <div class="shop-wrapper">
@@ -361,38 +362,77 @@ body.dark {
 
   <!-- 商品陈列区 -->
   <div class="shop-grid">
+    <!-- 1. 盲盒 -->
     <div class="product-card">
-      <div class="product-banner">
+      <div class="product-banner banner-box">
         <span class="product-tag">🔥 热门首发</span>
         <div class="icon">🎁</div>
       </div>
       <div class="product-body">
         <h3 class="product-name">幸运积分盲盒</h3>
-        <div class="product-price">199 积分 / 次</div>
+        <div class="product-price price-indigo">199 积分 / 次</div>
         <p class="product-desc">
-          开箱最高可斩获 <b>1999 积分</b>！
+          开箱最高可斩获 <b>1999 积分</b>！翻倍卡生效时奖励翻倍！
         </p>
         <button class="btn-buy" id="btn-open-box" onclick="handleOpenBox()">
           立即开启盲盒
         </button>
       </div>
     </div>
+
+    <!-- 2. 彩色用户名 -->
     <div class="product-card">
-    <div class="product-banner banner-color-name">
-      <span class="product-tag">✨ 个性特效</span>
-      <div class="icon">🌈</div>
+      <div class="product-banner banner-color-name">
+        <span class="product-tag">✨ 炫彩流光</span>
+        <div class="icon">🌈</div>
+      </div>
+      <div class="product-body">
+        <h3 class="product-name">彩色用户名（1天）</h3>
+        <div class="product-price price-pink">299 积分 / 天</div>
+        <p class="product-desc">
+          个人主页炫彩流光用户名，全站可见。<b>与自闭卡互斥</b>。
+        </p>
+        <button class="btn-buy pink" id="btn-buy-color" onclick="handleBuyColorName()">
+          立即兑换
+        </button>
+      </div>
     </div>
-    <div class="product-body">
-      <h3 class="product-name">彩色用户名（1天）</h3>
-      <div class="product-price">299 积分 / 天</div>
-      <p class="product-desc">
-        兑换后在个人主页（/user/）展示炫彩流光动画用户名，<b>全站所有人可见</b>！多次兑换时间自动累加。
-      </p>
-      <button class="btn-buy pink" id="btn-buy-color" onclick="handleBuyColorName()">
-        立即兑换特效 (299积分)
-      </button>
+
+    <!-- 3. 积分翻倍卡 (新增) -->
+    <div class="product-card">
+      <div class="product-banner banner-double">
+        <span class="product-tag">⚡ 收益加倍</span>
+        <div class="icon">⚡</div>
+      </div>
+      <div class="product-body">
+        <h3 class="product-name">积分翻倍卡（1天）</h3>
+        <div class="product-price price-amber">399 积分 / 24h</div>
+        <p class="product-desc">
+          24 小时内获得的所有积分翻倍！
+        </p>
+        <button class="btn-buy amber" id="btn-buy-double" onclick="handleBuyDoubleCard()">
+          立即兑换
+        </button>
+      </div>
     </div>
-  </div>
+
+    <!-- 4. 自闭卡 (新增) -->
+    <div class="product-card">
+      <div class="product-banner banner-solitude">
+        <span class="product-tag">🔒 隐私隐身</span>
+        <div class="icon">🤐</div>
+      </div>
+      <div class="product-body">
+        <h3 class="product-name">自闭卡（1天）</h3>
+        <div class="product-price price-slate">199 积分 / 24h</div>
+        <p class="product-desc">
+          24 小时内主页禁止其他人访问，自己访问显示“自闭中”。<b>与彩色名互斥</b>。
+        </p>
+        <button class="btn-buy slate" id="btn-buy-solitude" onclick="handleBuySolitudeCard()">
+          立即兑换
+        </button>
+      </div>
+    </div>
   </div>
 
   <!-- 概率公示 -->
@@ -447,21 +487,18 @@ body.dark {
   </div>
 </div>
 
-<!-- 开箱独立弹窗 -->
+<!-- 开箱与操作独立弹窗 -->
 <div class="shop-modal-mask" id="lottery-modal">
   <div class="shop-modal-box">
-    <!-- 加载中状态 -->
     <div id="modal-loading">
       <div class="spinner"></div>
-      <div style="font-weight: 600; color: var(--shop-text-main);">正在开启盲盒...</div>
+      <div style="font-weight: 600; color: var(--shop-text-main);">正在处理中...</div>
     </div>
-
-    <!-- 结果展示状态 -->
     <div id="modal-result" style="display: none;">
       <div style="font-size: 40px;" id="res-icon">🎉</div>
       <div class="result-val" id="res-points">+0</div>
       <div class="result-msg" id="res-desc">恭喜获得奖励</div>
-      <button class="btn-close" onclick="closeModal()">开心收下</button>
+      <button class="btn-close" onclick="closeModal()">我知道了</button>
     </div>
   </div>
 </div>
@@ -470,7 +507,6 @@ body.dark {
 let opening = false;
 let processing = false;
 
-// 弹窗通用控制辅助函数
 function showModalLoading(text = '正在处理中...') {
   const modal = document.getElementById('lottery-modal');
   const loadingDiv = document.getElementById('modal-loading');
@@ -503,13 +539,10 @@ function closeModal() {
   document.getElementById('lottery-modal').style.display = 'none';
 }
 
-// 1. 开启盲盒逻辑
+// 1. 开盲盒
 function handleOpenBox() {
   if (opening) return;
-
-  const ptsText = document.getElementById('user-points-val').innerText;
-  const currentPts = parseInt(ptsText, 10) || 0;
-
+  const currentPts = parseInt(document.getElementById('user-points-val').innerText, 10) || 0;
   if (currentPts < 199) {
     alert('积分不足，快去 AC 题目赚取积分吧！');
     return;
@@ -519,7 +552,6 @@ function handleOpenBox() {
   const btn = document.getElementById('btn-open-box');
   btn.disabled = true;
   btn.innerText = '正在开启...';
-
   showModalLoading('正在开启盲盒...');
 
   fetch('/api/shop/buy_box', {
@@ -534,13 +566,14 @@ function handleOpenBox() {
       } else {
         document.getElementById('user-points-val').innerText = data.userPoints;
         const reward = data.reward;
+        const tip = data.isDouble ? '【翻倍卡生效】' : '';
 
         if (reward >= 888) {
-          showModalResult('🌟', '+' + reward, '欧气大爆发！斩获超稀有大奖！', '#f59e0b');
+          showModalResult('🌟', '+' + reward, `${tip} 欧气大爆发！斩获超稀有大奖！`, '#f59e0b');
         } else if (reward >= 199) {
-          showModalResult('✨', '+' + reward, '运气不错，保本并小赚一笔！', '#10b981');
+          showModalResult('✨', '+' + reward, `${tip} 运气不错，保本并小赚一笔！`, '#10b981');
         } else if (reward > 0) {
-          showModalResult('💨', '+' + reward, '回血一波，再接再厉！', '#94a3b8');
+          showModalResult('💨', '+' + reward, `${tip} 回血一波，再接再厉！`, '#94a3b8');
         } else {
           showModalResult('💨', '+0', '空空如也，下次一定出金！', '#64748b');
         }
@@ -550,7 +583,7 @@ function handleOpenBox() {
       btn.innerText = '立即开启盲盒';
     }, 650);
   })
-  .catch(err => {
+  .catch(() => {
     alert('网络异常，请重试');
     closeModal();
     opening = false;
@@ -559,13 +592,10 @@ function handleOpenBox() {
   });
 }
 
-// 2. 购买彩色用户名逻辑
+// 2. 兑换彩色用户名
 function handleBuyColorName() {
   if (processing) return;
-
-  const ptsText = document.getElementById('user-points-val').innerText;
-  const currentPts = parseInt(ptsText, 10) || 0;
-
+  const currentPts = parseInt(document.getElementById('user-points-val').innerText, 10) || 0;
   if (currentPts < 299) {
     alert('积分不足，快去 AC 题目赚取积分吧！');
     return;
@@ -575,7 +605,6 @@ function handleBuyColorName() {
   const btn = document.getElementById('btn-buy-color');
   btn.disabled = true;
   btn.innerText = '正在兑换...';
-
   showModalLoading('正在为您装扮特效...');
 
   fetch('/api/shop/buy_color_name', {
@@ -594,7 +623,7 @@ function handleBuyColorName() {
       }
       processing = false;
       btn.disabled = false;
-      btn.innerText = '立即兑换特效 (299积分)';
+      btn.innerText = '立即兑换';
     }, 600);
   })
   .catch(() => {
@@ -602,7 +631,93 @@ function handleBuyColorName() {
     closeModal();
     processing = false;
     btn.disabled = false;
-    btn.innerText = '立即兑换特效 (299积分)';
+    btn.innerText = '立即兑换';
+  });
+}
+
+// 3. 兑换积分翻倍卡
+function handleBuyDoubleCard() {
+  if (processing) return;
+  const currentPts = parseInt(document.getElementById('user-points-val').innerText, 10) || 0;
+  if (currentPts < 399) {
+    alert('积分不足，快去 AC 题目赚取积分吧！');
+    return;
+  }
+
+  processing = true;
+  const btn = document.getElementById('btn-buy-double');
+  btn.disabled = true;
+  btn.innerText = '正在兑换...';
+  showModalLoading('正在激活积分翻倍权益...');
+
+  fetch('/api/shop/buy_double_card', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  })
+  .then(res => res.json())
+  .then(data => {
+    setTimeout(() => {
+      if (data.error) {
+        showModalResult('❌', '兑换失败', data.error, '#ef4444');
+      } else {
+        document.getElementById('user-points-val').innerText = data.userPoints;
+        const expireDate = new Date(data.doublePointsExpire).toLocaleString();
+        showModalResult('⚡', '翻倍卡已激活！', `24小时内所有积分获取翻倍生效中！截止时间：${expireDate}`, '#f59e0b');
+      }
+      processing = false;
+      btn.disabled = false;
+      btn.innerText = '立即兑换';
+    }, 600);
+  })
+  .catch(() => {
+    alert('网络异常，请重试');
+    closeModal();
+    processing = false;
+    btn.disabled = false;
+    btn.innerText = '立即兑换';
+  });
+}
+
+// 4. 兑换自闭卡
+function handleBuySolitudeCard() {
+  if (processing) return;
+  const currentPts = parseInt(document.getElementById('user-points-val').innerText, 10) || 0;
+  if (currentPts < 199) {
+    alert('积分不足，快去 AC 题目赚取积分吧！');
+    return;
+  }
+
+  processing = true;
+  const btn = document.getElementById('btn-buy-solitude');
+  btn.disabled = true;
+  btn.innerText = '正在开启...';
+  showModalLoading('正在开启自闭保护...');
+
+  fetch('/api/shop/buy_solitude', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  })
+  .then(res => res.json())
+  .then(data => {
+    setTimeout(() => {
+      if (data.error) {
+        showModalResult('❌', '开启失败', data.error, '#ef4444');
+      } else {
+        document.getElementById('user-points-val').innerText = data.userPoints;
+        const expireDate = new Date(data.solitudeExpire).toLocaleString();
+        showModalResult('🤐', '自闭卡已生效！', `他人将无法访问你的个人主页，有效期至：${expireDate}`, '#64748b');
+      }
+      processing = false;
+      btn.disabled = false;
+      btn.innerText = '立即兑换';
+    }, 600);
+  })
+  .catch(() => {
+    alert('网络异常，请重试');
+    closeModal();
+    processing = false;
+    btn.disabled = false;
+    btn.innerText = '立即兑换';
   });
 }
 </script>
