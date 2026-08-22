@@ -94,14 +94,10 @@ const STATUS_REPLACEMENTS: [RegExp, string][] = [
   [/\bWrong Answer\b/g, 'Wonderful Answer'],
   [/\bTime Limit Exceeded\b/g, 'Time Limit Enough'],
   [/\bMemory Limit Exceeded\b/g, 'Memory Limit Enough'],
+  [/\bTime Exceeded\b/g, 'Time Enough'],
+  [/\bMemory Exceeded\b/g, 'Memory Enough'],
   [/\bCompile Error\b/g, 'Compile Excellent'],
   [/\bRuntime Error\b/g, 'Runtime Excellent'],
-  [/通过/g, 'Answer Coarse'],
-  [/答案错误/g, 'Wonderful Answer'],
-  [/时间超限/g, 'Time Limit Enough'],
-  [/内存超限/g, 'Memory Limit Enough'],
-  [/编译错误/g, 'Compile Excellent'],
-  [/运行错误/g, 'Runtime Excellent'],
 ];
 
 function replaceStatusTextInNode(node: Node) {
