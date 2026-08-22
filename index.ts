@@ -1,4 +1,4 @@
-import { Context, STATUS, db, message } from 'hydrooj';
+import { Context, STATUS, db, MessageModel } from 'hydrooj';
 
 // 生成指定区间的随机整数 [min, max]
 function getRandomInt(min: number, max: number): number {
@@ -75,10 +75,10 @@ export function apply(ctx: Context) {
 
       // (8) 发送站内信通知用户（可选增强体验）
       try {
-        await message.send(
+        await MessageModel.send(
           1, // 系统账号发信
           uid,
-          `🎉 恭喜你成功通过题目 P${pid} ！\n本次提交已为你随机发放 ${rewardPoints} 积分奖励！`
+          `🎉 恭喜你通过题目 P${pid} ！\n本次提交已为你随机发放 ${rewardPoints} 积分奖励！`
         );
       } catch (msgErr) {
         // 站内信失败不影响主流程
