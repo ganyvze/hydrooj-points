@@ -354,9 +354,9 @@ body.dark {
       </div>
       <div class="product-body">
         <h3 class="product-name">幸运积分盲盒</h3>
-        <div class="product-price">🪙 199 积分 / 次</div>
+        <div class="product-price">199 积分 / 次</div>
         <p class="product-desc">
-          开箱最高可斩获 <b>1999 积分</b>！数学期望严格为 199 积分，完全保本设计，公平透明。
+          开箱最高可斩获 <b>1999 积分</b>！
         </p>
         <button class="btn-buy" id="btn-open-box" onclick="handleOpenBox()">
           立即开启盲盒
@@ -367,7 +367,7 @@ body.dark {
 
   <!-- 概率公示 -->
   <div class="rules-card">
-    <h3>📊 盲盒奖项与概率公示（期望值 = 199.00）</h3>
+    <h3>📊 盲盒奖项与概率公示</h3>
     <table class="rules-table">
       <thead>
         <tr>
@@ -446,7 +446,7 @@ function handleOpenBox() {
   const currentPts = parseInt(ptsText, 10) || 0;
 
   if (currentPts < 199) {
-    alert('积分不足 199，快去 AC 题目赚取积分吧！');
+    alert('积分不足，快去 AC 题目赚取积分吧！');
     return;
   }
 
