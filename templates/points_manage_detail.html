@@ -20,6 +20,8 @@
   --p-badge-double-text: #d97706;
   --p-badge-solitude-bg: #f1f5f9;
   --p-badge-solitude-text: #475569;
+  --p-badge-egg-bg: #ccfbf1;
+  --p-badge-egg-text: #0f766e;
 }
 
 html.theme--dark,
@@ -43,6 +45,8 @@ body.dark {
   --p-badge-double-text: #fbbf24;
   --p-badge-solitude-bg: rgba(148, 163, 184, 0.2);
   --p-badge-solitude-text: #cbd5e1;
+  --p-badge-egg-bg: rgba(20, 184, 166, 0.2);
+  --p-badge-egg-text: #2dd4bf;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -64,6 +68,8 @@ body.dark {
     --p-badge-double-text: #fbbf24;
     --p-badge-solitude-bg: rgba(148, 163, 184, 0.2);
     --p-badge-solitude-text: #cbd5e1;
+    --p-badge-egg-bg: rgba(20, 184, 166, 0.2);
+    --p-badge-egg-text: #2dd4bf;
   }
 }
 
@@ -404,6 +410,37 @@ body.dark {
         </div>
       </div>
 
+      <!-- 彩蛋 -->
+      <div class="p-perk-row">
+        <div>
+          <div style="font-weight: 600;">🥚 彩蛋</div>
+          <div style="font-size: 12px; color: var(--p-text-sub);">
+            {% if perks.isEasterEgg %}
+              <span style="color:#0d9488; font-weight:600;">生效中</span> (至 {{ moment(perks.easterEggExpire).format('YYYY-MM-DD HH:mm') }})
+            {% else %}
+              未激活
+            {% endif %}
+          </div>
+        </div>
+        <div style="display:flex; gap:6px;">
+          <form method="post" action="/manage/points/{{ udoc._id }}" style="display:inline;">
+            <input type="hidden" name="operation" value="setPerk">
+            <input type="hidden" name="perkType" value="easterEgg">
+            <input type="hidden" name="action" value="grant_days">
+            <input type="hidden" name="days" value="7">
+            <button class="p-btn-submit p-btn-blue" style="padding:4px 8px; font-size:12px;">+7天</button>
+          </form>
+          {% if perks.isEasterEgg %}
+          <form method="post" action="/manage/points/{{ udoc._id }}" style="display:inline;">
+            <input type="hidden" name="operation" value="setPerk">
+            <input type="hidden" name="perkType" value="easterEgg">
+            <input type="hidden" name="action" value="clear">
+            <button class="p-btn-submit p-btn-red" style="padding:4px 8px; font-size:12px;">移除</button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+
       <hr style="border:none; border-top:1px dashed var(--p-border); margin: 16px 0;">
 
       <!-- 直接设定积分 -->
@@ -452,6 +489,8 @@ body.dark {
               <span class="p-badge" style="background:rgba(245, 158, 11, 0.2); color:#fbbf24;">购买翻倍卡</span>
             {% elif l.type == 'shop_buy_solitude_card' %}
               <span class="p-badge" style="background:rgba(148, 163, 184, 0.2); color:#cbd5e1;">购买自闭卡</span>
+            {% elif l.type == 'shop_buy_easter_egg' %}
+              <span class="p-badge" style="background:rgba(20, 184, 166, 0.2); color:#14b8a6;">购买彩蛋</span>
             {% elif l.type == 'admin_grant' %}
               <span class="p-badge" style="background:rgba(34, 197, 94, 0.2); color:#4ade80;">管理员发放</span>
             {% elif l.type == 'admin_deduct' %}

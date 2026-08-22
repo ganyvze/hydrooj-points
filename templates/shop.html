@@ -169,6 +169,9 @@ body.dark {
 .banner-solitude {
   background: linear-gradient(135deg, #475569 0%, #0f172a 100%);
 }
+.banner-egg {
+  background: linear-gradient(135deg, #0d9488 0%, #0284c7 100%);
+}
 
 .product-tag {
   position: absolute;
@@ -203,6 +206,7 @@ body.dark {
 .price-amber { color: #f59e0b; }
 .price-slate { color: #64748b; }
 .price-indigo { color: #6366f1; }
+.price-teal { color: #0d9488; }
 
 .product-desc {
   font-size: 13px;
@@ -230,6 +234,8 @@ body.dark {
 .btn-buy.amber:hover { background: #b45309; }
 .btn-buy.slate { background: #334155; }
 .btn-buy.slate:hover { background: #1e293b; }
+.btn-buy.teal { background: #0d9488; }
+.btn-buy.teal:hover { background: #0f766e; }
 .btn-buy:disabled {
   background: #64748b;
   cursor: not-allowed;
@@ -355,7 +361,6 @@ body.dark {
   50% { transform: scale(1.2); }
   100% { transform: scale(1); }
 }
-
 </style>
 
 <div class="shop-wrapper">
@@ -409,7 +414,7 @@ body.dark {
       </div>
     </div>
 
-    <!-- 3. 积分翻倍卡 (新增) -->
+    <!-- 3. 积分翻倍卡 -->
     <div class="product-card">
       <div class="product-banner banner-double">
         <span class="product-tag">⚡ 收益加倍</span>
@@ -427,7 +432,7 @@ body.dark {
       </div>
     </div>
 
-    <!-- 4. 自闭卡 (新增) -->
+    <!-- 4. 自闭卡 -->
     <div class="product-card">
       <div class="product-banner banner-solitude">
         <span class="product-tag">🔒 隐私隐身</span>
@@ -440,6 +445,24 @@ body.dark {
           24 小时内主页禁止其他人访问，自己访问显示“自闭中”
         </p>
         <button class="btn-buy slate" id="btn-buy-solitude" onclick="handleBuySolitudeCard()">
+          立即兑换
+        </button>
+      </div>
+    </div>
+
+    <!-- 5. 彩蛋 -->
+    <div class="product-card">
+      <div class="product-banner banner-egg">
+        <span class="product-tag">🥚 趣味彩蛋</span>
+        <div class="icon">🥚</div>
+      </div>
+      <div class="product-body">
+        <h3 class="product-name">彩蛋（1天）</h3>
+        <div class="product-price price-teal">99 积分 / 天</div>
+        <p class="product-desc">
+          ~
+        </p>
+        <button class="btn-buy teal" id="btn-buy-egg" onclick="handleBuyEasterEgg()">
           立即兑换
         </button>
       </div>
@@ -550,7 +573,7 @@ function closeModal() {
   document.getElementById('lottery-modal').style.display = 'none';
 }
 
-// 核心：数字平滑滚动缓动函数（从 +0 快速冲刺并缓动定格）
+// 核心：数字平滑滚动缓动函数
 function animateNumberRoll(targetNum, color, onFinish) {
   const loadingDiv = document.getElementById('modal-loading');
   const resultDiv = document.getElementById('modal-result');
@@ -561,7 +584,6 @@ function animateNumberRoll(targetNum, color, onFinish) {
   resPts.style.color = color;
   resPts.classList.remove('pop-bounce');
 
-  // 如果抽中 0 积分，直接展示
   if (targetNum <= 0) {
     resPts.innerText = '+0';
     resPts.classList.add('pop-bounce');
@@ -569,14 +591,12 @@ function animateNumberRoll(targetNum, color, onFinish) {
     return;
   }
 
-  const duration = 1200; // 滚动总时长 1.2 秒
+  const duration = 1200;
   const startTime = performance.now();
 
   function step(currentTime) {
     const elapsed = currentTime - startTime;
     const progress = Math.min(elapsed / duration, 1);
-
-    // 三次方缓出曲线 (easeOutCubic)：起步极快，后段逐渐减速到单个数字跳动
     const easeProgress = 1 - Math.pow(1 - progress, 3);
     const currentVal = Math.floor(easeProgress * targetNum);
 
@@ -586,7 +606,7 @@ function animateNumberRoll(targetNum, color, onFinish) {
       requestAnimationFrame(step);
     } else {
       resPts.innerText = '+' + targetNum;
-      resPts.classList.add('pop-bounce'); // 最终数字定格弹跳
+      resPts.classList.add('pop-bounce');
       if (onFinish) onFinish();
     }
   }
@@ -624,7 +644,6 @@ function handleOpenBox() {
         return;
       }
 
-      // 更新页面余额
       document.getElementById('user-points-val').innerText = data.userPoints;
 
       const reward = data.reward;
@@ -648,11 +667,9 @@ function handleOpenBox() {
         color = '#6366f1';
       }
 
-      // 切换为结算图标与状态
       document.getElementById('res-icon').innerText = icon;
       document.getElementById('res-desc').innerText = '正在结算奖励...';
 
-      // 启动从 +0 上涨到目标值的动画
       animateNumberRoll(reward, color, () => {
         document.getElementById('res-desc').innerText = desc;
         opening = false;
@@ -785,6 +802,49 @@ function handleBuySolitudeCard() {
         document.getElementById('user-points-val').innerText = data.userPoints;
         const expireDate = new Date(data.solitudeExpire).toLocaleString();
         showModalResult('🤐', '自闭卡已生效！', `他人将无法访问你的个人主页，有效期至：${expireDate}`, '#64748b');
+      }
+      processing = false;
+      btn.disabled = false;
+      btn.innerText = '立即兑换';
+    }, 600);
+  })
+  .catch(() => {
+    alert('网络异常，请重试');
+    closeModal();
+    processing = false;
+    btn.disabled = false;
+    btn.innerText = '立即兑换';
+  });
+}
+
+// 5. 兑换彩蛋
+function handleBuyEasterEgg() {
+  if (processing) return;
+  const currentPts = parseInt(document.getElementById('user-points-val').innerText, 10) || 0;
+  if (currentPts < 99) {
+    alert('积分不足，快去 AC 题目赚取积分吧！');
+    return;
+  }
+
+  processing = true;
+  const btn = document.getElementById('btn-buy-egg');
+  btn.disabled = true;
+  btn.innerText = '正在兑换...';
+  showModalLoading('正在激活彩蛋...');
+
+  fetch('/api/shop/buy_easter_egg', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  })
+  .then(res => res.json())
+  .then(data => {
+    setTimeout(() => {
+      if (data.error) {
+        showModalResult('❌', '兑换失败', data.error, '#ef4444');
+      } else {
+        document.getElementById('user-points-val').innerText = data.userPoints;
+        const expireDate = new Date(data.easterEggExpire).toLocaleString();
+        showModalResult('🥚', '彩蛋已激活！', `有效期至：${expireDate}`, '#0d9488');
       }
       processing = false;
       btn.disabled = false;

@@ -23,6 +23,7 @@ declare module 'hydrooj' {
     colorNameExpire?: Date;
     doublePointsExpire?: Date;
     solitudeExpire?: Date;
+    easterEggExpire?: Date;
   }
   interface Collections {
     point_log: PointLogDoc;
@@ -52,6 +53,7 @@ const BOX_PRICE = 199;
 const COLOR_NAME_PRICE = 299;    // 彩色用户名价格 (299积分/天)
 const DOUBLE_CARD_PRICE = 399;   // 积分翻倍卡价格 (399积分/24小时)
 const SOLITUDE_CARD_PRICE = 199; // 自闭卡价格 (199积分/24小时)
+const EASTER_EGG_PRICE = 99;    // 彩蛋价格 (99积分/24小时)
 
 const BOX_PRIZES = [
   { points: 1999, weight: 10 },
@@ -90,6 +92,7 @@ class ShopHandler extends Handler {
       colorNameExpire: udoc?.colorNameExpire || null,
       doublePointsExpire: udoc?.doublePointsExpire || null,
       solitudeExpire: udoc?.solitudeExpire || null,
+      easterEggExpire: udoc?.easterEggExpire || null,
     };
   }
 }
@@ -294,11 +297,65 @@ class BuySolitudeCardHandler extends Handler {
   }
 }
 
+class BuyEasterEggHandler extends Handler {
+  async post() {
+    const uid = this.user._id;
+    if (!uid || uid <= 1) throw new PermissionError('请先登录');
+
+    const deductRes = await db.collection('user').updateOne(
+      { _id: uid, points: { $gte: EASTER_EGG_PRICE } },
+      { $inc: { points: -EASTER_EGG_PRICE } }
+    );
+
+    if (deductRes.matchedCount === 0) {
+      this.response.body = { error: `积分不足 ${EASTER_EGG_PRICE}，无法兑换` };
+      return;
+    }
+
+    const now = Date.now();
+    const udoc = await db.collection('user').findOne({ _id: uid });
+    let baseTime = now;
+    if (udoc?.easterEggExpire && new Date(udoc.easterEggExpire).getTime() > now) {
+      baseTime = new Date(udoc.easterEggExpire).getTime();
+    }
+    const expireAt = new Date(baseTime + 24 * 60 * 60 * 1000);
+
+    await db.collection('user').updateOne(
+      { _id: uid },
+      { $set: { easterEggExpire: expireAt } }
+    );
+
+    await db.collection('point_log').insertOne({
+      uid,
+      type: 'shop_buy_easter_egg',
+      cost: EASTER_EGG_PRICE,
+      durationDays: 1,
+      expireAt,
+      createdAt: new Date(),
+    });
+
+    const updatedUser = await db.collection('user').findOne({ _id: uid });
+    this.response.body = {
+      success: true,
+      userPoints: updatedUser?.points || 0,
+      easterEggExpire: expireAt,
+    };
+  }
+}
+
 class UserEffectHandler extends Handler {
   async get() {
-    const targetUid = parseInt(this.request.query.uid as string, 10);
+    let targetUid = parseInt(this.request.query.uid as string, 10);
+    if (!targetUid || isNaN(targetUid)) {
+      targetUid = this.user?._id;
+    }
     if (!targetUid || targetUid <= 1) {
-      this.response.body = { isColorName: false, isSolitude: false, isDoublePoints: false };
+      this.response.body = {
+        isColorName: false,
+        isSolitude: false,
+        isDoublePoints: false,
+        isEasterEgg: false,
+      };
       return;
     }
 
@@ -307,14 +364,17 @@ class UserEffectHandler extends Handler {
     const isColorName = !!(udoc?.colorNameExpire && new Date(udoc.colorNameExpire).getTime() > now);
     const isSolitude = !!(udoc?.solitudeExpire && new Date(udoc.solitudeExpire).getTime() > now);
     const isDoublePoints = !!(udoc?.doublePointsExpire && new Date(udoc.doublePointsExpire).getTime() > now);
+    const isEasterEgg = !!(udoc?.easterEggExpire && new Date(udoc.easterEggExpire).getTime() > now);
 
     this.response.body = {
       isColorName,
       isSolitude,
       isDoublePoints,
+      isEasterEgg,
       expireAt: udoc?.colorNameExpire || null,
       solitudeExpire: udoc?.solitudeExpire || null,
       doublePointsExpire: udoc?.doublePointsExpire || null,
+      easterEggExpire: udoc?.easterEggExpire || null,
     };
   }
 }
@@ -349,6 +409,7 @@ class PointsManageMainHandler extends PointsManageHandler {
         { colorNameExpire: { $gt: now } },
         { doublePointsExpire: { $gt: now } },
         { solitudeExpire: { $gt: now } },
+        { easterEggExpire: { $gt: now } },
       ],
     });
     const totalLogsCount = await db.collection('point_log').countDocuments();
@@ -450,7 +511,6 @@ class PointsManageDetailHandler extends PointsManageHandler {
   @param('uid', Types.Int)
   @param('page', Types.PositiveInt, true)
   async get(domainId: string, uid: number, page = 1) {
-    // ✅ 直接从数据库中读取完整用户文档（包含 points 与特权到期时间）
     const udoc = await db.collection('user').findOne({ _id: uid });
     if (!udoc) throw new UserNotFoundError(uid);
 
@@ -473,6 +533,7 @@ class PointsManageDetailHandler extends PointsManageHandler {
     const isColorName = !!(udoc.colorNameExpire && new Date(udoc.colorNameExpire).getTime() > now);
     const isDoublePoints = !!(udoc.doublePointsExpire && new Date(udoc.doublePointsExpire).getTime() > now);
     const isSolitude = !!(udoc.solitudeExpire && new Date(udoc.solitudeExpire).getTime() > now);
+    const isEasterEgg = !!(udoc.easterEggExpire && new Date(udoc.easterEggExpire).getTime() > now);
 
     this.response.template = 'points_manage_detail.html';
     this.response.body = {
@@ -485,6 +546,8 @@ class PointsManageDetailHandler extends PointsManageHandler {
         doublePointsExpire: udoc.doublePointsExpire,
         isSolitude,
         solitudeExpire: udoc.solitudeExpire,
+        isEasterEgg,
+        easterEggExpire: udoc.easterEggExpire,
       },
       logs,
       opUserMap,
@@ -614,11 +677,13 @@ class PointsManageDetailHandler extends PointsManageHandler {
       colorName: 'colorNameExpire',
       doublePoints: 'doublePointsExpire',
       solitude: 'solitudeExpire',
+      easterEgg: 'easterEggExpire',
     };
     const perkNames: Record<string, string> = {
       colorName: '彩色用户名',
       doublePoints: '积分翻倍卡',
       solitude: '自闭卡',
+      easterEgg: '彩蛋',
     };
 
     const field = fieldMap[perkType];
@@ -666,6 +731,7 @@ export function apply(ctx: Context) {
   ctx.Route('shop_buy_color_name', '/api/shop/buy_color_name', BuyColorNameHandler);
   ctx.Route('shop_buy_double_card', '/api/shop/buy_double_card', BuyDoubleCardHandler);
   ctx.Route('shop_buy_solitude', '/api/shop/buy_solitude', BuySolitudeCardHandler);
+  ctx.Route('shop_buy_easter_egg', '/api/shop/buy_easter_egg', BuyEasterEggHandler);
   ctx.Route('shop_user_effect', '/api/shop/user_effect', UserEffectHandler);
 
   // 2. 注册控制面板管理路由
@@ -720,27 +786,25 @@ export function apply(ctx: Context) {
 
   // 6. 拦截自闭卡主页访问
   ctx.on('handler/before/UserDetail', async (that) => {
-  const targetUid = parseInt(that.args?.uid || that.request?.params?.uid, 10);
-  if (!targetUid || targetUid <= 1) return;
+    const targetUid = parseInt(that.args?.uid || that.request?.params?.uid, 10);
+    if (!targetUid || targetUid <= 1) return;
 
-  // 访问者本人或超级管理员允许访问
-  if (that.user?._id === targetUid || that.user?.hasPriv(PRIV.PRIV_EDIT_SYSTEM)) {
-    return;
-  }
+    if (that.user?._id === targetUid || that.user?.hasPriv(PRIV.PRIV_EDIT_SYSTEM)) {
+      return;
+    }
 
-  // 查询目标用户的自闭卡是否生效中
-  const udoc = await db.collection('user').findOne(
-    { _id: targetUid },
-    { projection: { solitudeExpire: 1 } }
-  );
+    const udoc = await db.collection('user').findOne(
+      { _id: targetUid },
+      { projection: { solitudeExpire: 1 } }
+    );
 
-  const now = Date.now();
-  const isSolitude = !!(udoc?.solitudeExpire && new Date(udoc.solitudeExpire).getTime() > now);
+    const now = Date.now();
+    const isSolitude = !!(udoc?.solitudeExpire && new Date(udoc.solitudeExpire).getTime() > now);
 
-  if (isSolitude) {
-    throw new ForbiddenError('🤐 该用户已开启自闭卡，个人主页暂不可访问');
-  }
-});
+    if (isSolitude) {
+      throw new ForbiddenError('🤐 该用户已开启自闭卡，个人主页暂不可访问');
+    }
+  });
 
   // 7. AC 奖励监听
   ctx.on('record/judge', async (rdoc) => {

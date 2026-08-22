@@ -26,6 +26,9 @@
   --p-badge-solitude-bg: #f1f5f9;
   --p-badge-solitude-text: #475569;
   --p-badge-solitude-border: #cbd5e1;
+  --p-badge-egg-bg: #ccfbf1;
+  --p-badge-egg-text: #0f766e;
+  --p-badge-egg-border: #99f6e4;
   --p-badge-ac-bg: #ecfdf5;
   --p-badge-ac-text: #059669;
   --p-badge-box-bg: #e0e7ff;
@@ -63,6 +66,9 @@ body.dark {
   --p-badge-solitude-bg: rgba(148, 163, 184, 0.2);
   --p-badge-solitude-text: #cbd5e1;
   --p-badge-solitude-border: rgba(148, 163, 184, 0.3);
+  --p-badge-egg-bg: rgba(20, 184, 166, 0.2);
+  --p-badge-egg-text: #2dd4bf;
+  --p-badge-egg-border: rgba(20, 184, 166, 0.4);
   --p-badge-ac-bg: rgba(16, 185, 129, 0.2);
   --p-badge-ac-text: #34d399;
   --p-badge-box-bg: rgba(99, 102, 241, 0.2);
@@ -98,6 +104,9 @@ body.dark {
     --p-badge-solitude-bg: rgba(148, 163, 184, 0.2);
     --p-badge-solitude-text: #cbd5e1;
     --p-badge-solitude-border: rgba(148, 163, 184, 0.3);
+    --p-badge-egg-bg: rgba(20, 184, 166, 0.2);
+    --p-badge-egg-text: #2dd4bf;
+    --p-badge-egg-border: rgba(20, 184, 166, 0.4);
     --p-badge-ac-bg: rgba(16, 185, 129, 0.2);
     --p-badge-ac-text: #34d399;
     --p-badge-box-bg: rgba(99, 102, 241, 0.2);
@@ -283,6 +292,11 @@ body.dark {
   color: var(--p-badge-solitude-text);
   border: 1px solid var(--p-badge-solitude-border);
 }
+.p-badge-egg {
+  background: var(--p-badge-egg-bg);
+  color: var(--p-badge-egg-text);
+  border: 1px solid var(--p-badge-egg-border);
+}
 
 .p-amount-pos { color: #16a34a; font-weight: 700; }
 .p-amount-neg { color: #dc2626; font-weight: 700; }
@@ -415,6 +429,10 @@ body.dark {
               <span class="p-badge p-badge-solitude">🤐 自闭中</span>
               {% set hasPerk = true %}
             {% endif %}
+            {% if u.easterEggExpire and u.easterEggExpire.getTime() > now %}
+              <span class="p-badge p-badge-egg">🥚 彩蛋</span>
+              {% set hasPerk = true %}
+            {% endif %}
             {% if not hasPerk %}
               <span style="color: var(--p-text-muted); font-size: 13px;">无</span>
             {% endif %}
@@ -485,6 +503,8 @@ body.dark {
               <span class="p-badge p-badge-double">兑换翻倍卡</span>
             {% elif l.type == 'shop_buy_solitude_card' %}
               <span class="p-badge p-badge-solitude">兑换自闭卡</span>
+            {% elif l.type == 'shop_buy_easter_egg' %}
+              <span class="p-badge p-badge-egg">兑换彩蛋</span>
             {% elif l.type == 'admin_grant' %}
               <span class="p-badge" style="background:var(--p-badge-admin-bg); color:var(--p-badge-admin-text);">管理员发放</span>
             {% elif l.type == 'admin_deduct' %}
