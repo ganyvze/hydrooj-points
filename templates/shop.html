@@ -468,7 +468,42 @@ body.dark {
 
 <script>
 let opening = false;
+let processing = false;
 
+// 弹窗通用控制辅助函数
+function showModalLoading(text = '正在处理中...') {
+  const modal = document.getElementById('lottery-modal');
+  const loadingDiv = document.getElementById('modal-loading');
+  const resultDiv = document.getElementById('modal-result');
+  const loadingText = loadingDiv.querySelector('div:last-child');
+  if (loadingText) loadingText.innerText = text;
+  
+  loadingDiv.style.display = 'block';
+  resultDiv.style.display = 'none';
+  modal.style.display = 'flex';
+}
+
+function showModalResult(icon, valText, descText, color = '#6366f1') {
+  const loadingDiv = document.getElementById('modal-loading');
+  const resultDiv = document.getElementById('modal-result');
+  const resIcon = document.getElementById('res-icon');
+  const resPts = document.getElementById('res-points');
+  const resDesc = document.getElementById('res-desc');
+
+  loadingDiv.style.display = 'none';
+  resultDiv.style.display = 'block';
+
+  resIcon.innerText = icon;
+  resPts.innerText = valText;
+  resPts.style.color = color;
+  resDesc.innerText = descText;
+}
+
+function closeModal() {
+  document.getElementById('lottery-modal').style.display = 'none';
+}
+
+// 1. 开启盲盒逻辑
 function handleOpenBox() {
   if (opening) return;
 
@@ -485,13 +520,7 @@ function handleOpenBox() {
   btn.disabled = true;
   btn.innerText = '正在开启...';
 
-  // 显示弹窗并处于加载状态
-  const modal = document.getElementById('lottery-modal');
-  const loadingDiv = document.getElementById('modal-loading');
-  const resultDiv = document.getElementById('modal-result');
-  loadingDiv.style.display = 'block';
-  resultDiv.style.display = 'none';
-  modal.style.display = 'flex';
+  showModalLoading('正在开启盲盒...');
 
   fetch('/api/shop/buy_box', {
     method: 'POST',
@@ -500,40 +529,20 @@ function handleOpenBox() {
   .then(res => res.json())
   .then(data => {
     setTimeout(() => {
-      loadingDiv.style.display = 'none';
-      resultDiv.style.display = 'block';
-
       if (data.error) {
-        document.getElementById('res-icon').innerText = '❌';
-        document.getElementById('res-points').style.color = '#ef4444';
-        document.getElementById('res-points').innerText = '开启失败';
-        document.getElementById('res-desc').innerText = data.error;
+        showModalResult('❌', '开启失败', data.error, '#ef4444');
       } else {
         document.getElementById('user-points-val').innerText = data.userPoints;
-
         const reward = data.reward;
-        const resPtsElem = document.getElementById('res-points');
-        const resDescElem = document.getElementById('res-desc');
-        const resIconElem = document.getElementById('res-icon');
-
-        resPtsElem.innerText = '+' + reward;
 
         if (reward >= 888) {
-          resIconElem.innerText = '🌟';
-          resPtsElem.style.color = '#f59e0b';
-          resDescElem.innerText = '欧气大爆发！斩获超稀有大奖！';
+          showModalResult('🌟', '+' + reward, '欧气大爆发！斩获超稀有大奖！', '#f59e0b');
         } else if (reward >= 199) {
-          resIconElem.innerText = '✨';
-          resPtsElem.style.color = '#10b981';
-          resDescElem.innerText = '运气不错，保本并小赚一笔！';
+          showModalResult('✨', '+' + reward, '运气不错，保本并小赚一笔！', '#10b981');
         } else if (reward > 0) {
-          resIconElem.innerText = '🪙';
-          resPtsElem.style.color = '#94a3b8';
-          resDescElem.innerText = '回血一波，再接再厉！';
+          showModalResult('🪙', '+' + reward, '回血一波，再接再厉！', '#94a3b8');
         } else {
-          resIconElem.innerText = '💨';
-          resPtsElem.style.color = '#64748b';
-          resDescElem.innerText = '空空如也，下次一定出金！';
+          showModalResult('💨', '+0', '空空如也，下次一定出金！', '#64748b');
         }
       }
       opening = false;
@@ -550,20 +559,23 @@ function handleOpenBox() {
   });
 }
 
-function closeModal() {
-  document.getElementById('lottery-modal').style.display = 'none';
-}
-
-// 购买彩色用户名
+// 2. 购买彩色用户名逻辑
 function handleBuyColorName() {
   if (processing) return;
-  const currentPts = parseInt($('#user-points-val').text(), 10) || 0;
+
+  const ptsText = document.getElementById('user-points-val').innerText;
+  const currentPts = parseInt(ptsText, 10) || 0;
+
   if (currentPts < 299) {
     alert('积分不足，快去 AC 题目赚取积分吧！');
     return;
   }
 
   processing = true;
+  const btn = document.getElementById('btn-buy-color');
+  btn.disabled = true;
+  btn.innerText = '正在兑换...';
+
   showModalLoading('正在为您装扮特效...');
 
   fetch('/api/shop/buy_color_name', {
@@ -576,19 +588,22 @@ function handleBuyColorName() {
       if (data.error) {
         showModalResult('❌', '兑换失败', data.error, '#ef4444');
       } else {
-        $('#user-points-val').text(data.userPoints);
+        document.getElementById('user-points-val').innerText = data.userPoints;
         const expireDate = new Date(data.colorNameExpire).toLocaleString();
         showModalResult('🌈', '兑换成功！', `彩色用户名已激活，有效期至：${expireDate}`, '#ec4899');
       }
       processing = false;
+      btn.disabled = false;
+      btn.innerText = '立即兑换特效 (299积分)';
     }, 600);
   })
   .catch(() => {
     alert('网络异常，请重试');
     closeModal();
     processing = false;
+    btn.disabled = false;
+    btn.innerText = '立即兑换特效 (299积分)';
   });
 }
-
 </script>
 {% endblock %}
