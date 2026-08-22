@@ -1,110 +1,388 @@
-{% extends "layout/basic.html" %}
+{% extends "basic.html" %}
 {% block content %}
-<div class="ui container" style="margin-top: 25px; margin-bottom: 50px;">
-  <!-- 头部信息 -->
-  <div class="ui segment secondary clearing" style="border-radius: 12px; padding: 20px;">
-    <h2 class="ui left floated header" style="margin-bottom: 0;">
-      <i class="shopping bag icon" style="color: #f2711c;"></i>
-      <div class="content">
-        积分商城
-        <div class="sub header">通过刷题积累积分，抽取惊喜盲盒或兑换道具</div>
-      </div>
-    </h2>
-    <div class="ui right floated statistic" style="margin: 0;">
-      <div class="value" style="color: #f2711c;" id="display-points">
-        {{ userPoints }}
-      </div>
-      <div class="label">我的积分</div>
+<style>
+/* ================= 全局扁平化设计变量与重置 ================= */
+.shop-wrapper {
+  max-width: 1040px;
+  margin: 24px auto;
+  padding: 0 16px 60px 16px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color: #1e293b;
+}
+
+/* 顶部信息卡片 */
+.shop-header {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 24px 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+.shop-title h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.shop-title p {
+  margin: 6px 0 0 0;
+  color: #64748b;
+  font-size: 14px;
+}
+.shop-balance {
+  text-align: right;
+  background: #f8fafc;
+  padding: 10px 20px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+.shop-balance .label {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+}
+.shop-balance .value {
+  font-size: 26px;
+  font-weight: 800;
+  color: #f59e0b;
+}
+
+/* 商品卡片网格 */
+.shop-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 24px;
+  margin-top: 24px;
+}
+
+/* 扁平化商品卡片 */
+.product-card {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  display: flex;
+  flex-direction: column;
+}
+.product-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 20px rgba(0, 0, 0, 0.08);
+}
+.product-banner {
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  padding: 40px 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+.product-banner .icon {
+  font-size: 54px;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.15));
+}
+.product-tag {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(4px);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+.product-body {
+  padding: 20px;
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+}
+.product-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+.product-price {
+  font-size: 15px;
+  font-weight: 700;
+  color: #ec4899;
+  margin: 8px 0;
+}
+.product-desc {
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.6;
+  margin: 0 0 16px 0;
+}
+.btn-buy {
+  width: 100%;
+  padding: 12px 0;
+  background: #4f46e5;
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, opacity 0.2s ease;
+}
+.btn-buy:hover {
+  background: #4338ca;
+}
+.btn-buy:disabled {
+  background: #94a3b8;
+  cursor: not-allowed;
+}
+
+/* 概率说明卡片 */
+.rules-card {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  padding: 24px;
+  margin-top: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+.rules-card h3 {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+}
+.rules-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.rules-table th {
+  background: #f8fafc;
+  color: #64748b;
+  font-weight: 600;
+  padding: 10px 16px;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+}
+.rules-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+}
+.rules-table tr:last-child td {
+  border-bottom: none;
+}
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.badge-gold { background: #fef3c7; color: #b45309; }
+.badge-purple { background: #f3e8ff; color: #7e22ce; }
+.badge-blue { background: #e0e7ff; color: #4338ca; }
+.badge-gray { background: #f1f5f9; color: #475569; }
+
+/* 独立弹窗 (Modal) */
+.shop-modal-mask {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+}
+.shop-modal-box {
+  background: #ffffff;
+  border-radius: 20px;
+  width: 90%;
+  max-width: 360px;
+  padding: 32px 24px;
+  text-align: center;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15);
+  animation: popIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes popIn {
+  0% { transform: scale(0.9); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.spinner {
+  width: 44px;
+  height: 44px;
+  border: 4px solid #e2e8f0;
+  border-top-color: #4f46e5;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 16px auto;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.result-val {
+  font-size: 38px;
+  font-weight: 800;
+  margin: 12px 0 6px 0;
+}
+.result-msg {
+  font-size: 14px;
+  color: #64748b;
+  margin-bottom: 24px;
+}
+.btn-close {
+  width: 100%;
+  padding: 10px 0;
+  background: #0f172a;
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+</style>
+
+<div class="shop-wrapper">
+  <!-- 顶部统计栏 -->
+  <div class="shop-header">
+    <div class="shop-title">
+      <h2>🛍️ 积分商城</h2>
+      <p>通过日常刷题积累积分，抽取惊喜盲盒或兑换专属道具</p>
+    </div>
+    <div class="shop-balance">
+      <div class="label">我的积分余额</div>
+      <div class="value" id="user-points-val">{{ userPoints }}</div>
     </div>
   </div>
 
-  <!-- 商品列表 -->
-  <div class="ui three stackable cards" style="margin-top: 15px;">
-    <!-- 盲盒商品卡片 -->
-    <div class="ui card" style="border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.08);">
-      <div class="image" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); text-align: center; padding: 35px 0;">
-        <i class="cube icon" style="font-size: 5rem; color: #fff; text-shadow: 0 4px 12px rgba(0,0,0,0.2);"></i>
+  <!-- 商品陈列区 -->
+  <div class="shop-grid">
+    <div class="product-card">
+      <div class="product-banner">
+        <span class="product-tag">🔥 热门首发</span>
+        <div class="icon">🎁</div>
       </div>
-      <div class="content">
-        <div class="header">幸运积分盲盒</div>
-        <div class="meta" style="margin-top: 5px;">
-          <span class="price" style="font-size: 1.2rem; font-weight: bold; color: #e03997;">
-            <i class="coins icon"></i> 199 积分 / 次
-          </span>
-        </div>
-        <div class="description" style="margin-top: 10px; color: #666; font-size: 0.92rem;">
-          开启随机获得 <b>0 ~ 1999</b> 积分！理论数学期望为 199 积分（严格保本设计，公平公正）。
-        </div>
-      </div>
-      <div class="extra content" style="background: #fafafa;">
-        <button class="ui fluid button purple" id="btn-buy-box" onclick="openMysteryBox()">
-          <i class="gift icon"></i> 立即开启 (199积分)
+      <div class="product-body">
+        <h3 class="product-name">幸运积分盲盒</h3>
+        <div class="product-price">🪙 199 积分 / 次</div>
+        <p class="product-desc">
+          开箱最高可斩获 <b>1999 积分</b>！数学期望严格为 199 积分，完全保本设计，公平透明。
+        </p>
+        <button class="btn-buy" id="btn-open-box" onclick="handleOpenBox()">
+          立即开启盲盒
         </button>
       </div>
     </div>
   </div>
 
-  <!-- 概率说明 -->
-  <div class="ui segment" style="border-radius: 12px; margin-top: 30px;">
-    <h4 class="ui header"><i class="info circle icon"></i> 盲盒概率与奖项分布</h4>
-    <table class="ui celled compact table center aligned">
+  <!-- 概率公示 -->
+  <div class="rules-card">
+    <h3>📊 盲盒奖项与概率公示（期望值 = 199.00）</h3>
+    <table class="rules-table">
       <thead>
         <tr>
-          <th>奖项</th>
+          <th>奖项等阶</th>
           <th>获得积分</th>
-          <th>获得概率</th>
+          <th>概率</th>
         </tr>
       </thead>
       <tbody>
-        <tr class="positive"><td>特等奖</td><td><b>1999</b> 积分</td><td>1.0%</td></tr>
-        <tr class="positive"><td>一等奖</td><td><b>888</b> 积分</td><td>4.0%</td></tr>
-        <tr class="warning"><td>二等奖</td><td><b>399</b> 积分</td><td>15.8%</td></tr>
-        <tr><td>保本奖</td><td><b>199</b> 积分</td><td>19.2%</td></tr>
-        <tr class="negative"><td>回血奖</td><td><b>99</b> 积分</td><td>38.0%</td></tr>
-        <tr class="negative"><td>小亏奖</td><td><b>66</b> 积分</td><td>7.0%</td></tr>
-        <tr class="error"><td>谢谢惠顾</td><td><b>0</b> 积分</td><td>15.0%</td></tr>
+        <tr>
+          <td><span class="badge badge-gold">特等奖</span></td>
+          <td><b>1999 积分</b> (10倍大奖)</td>
+          <td>1.0%</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-purple">一等奖</span></td>
+          <td><b>888 积分</b></td>
+          <td>4.0%</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-blue">二等奖</span></td>
+          <td><b>399 积分</b></td>
+          <td>15.8%</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-gray">保本奖</span></td>
+          <td><b>199 积分</b></td>
+          <td>19.2%</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-gray">回血奖</span></td>
+          <td><b>99 积分</b></td>
+          <td>38.0%</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-gray">小亏奖</span></td>
+          <td><b>66 积分</b></td>
+          <td>7.0%</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-gray">谢谢惠顾</span></td>
+          <td><b>0 积分</b></td>
+          <td>15.0%</td>
+        </tr>
       </tbody>
     </table>
   </div>
 </div>
 
-<!-- 开箱动效 Modal -->
-<div class="ui mini modal" id="result-modal" style="text-align: center; border-radius: 12px;">
-  <div class="header">🎁 盲盒开奖</div>
-  <div class="content" style="padding: 30px 20px;">
-    <div id="box-animating">
-      <i class="spinner loading icon" style="font-size: 3rem; color: #764ba2;"></i>
-      <p style="margin-top: 15px; font-weight: bold; color: #555;">正在揭晓惊喜...</p>
+<!-- 开箱独立弹窗 -->
+<div class="shop-modal-mask" id="lottery-modal">
+  <div class="shop-modal-box">
+    <!-- 加载中动画 -->
+    <div id="modal-loading">
+      <div class="spinner"></div>
+      <div style="font-weight: 600; color: #475569;">正在开启盲盒...</div>
     </div>
-    <div id="box-result" style="display: none;">
-      <h1 id="result-text" style="font-size: 2.6rem; margin: 10px 0;"></h1>
-      <p id="result-desc" style="color: #666;"></p>
+
+    <!-- 结果展示 -->
+    <div id="modal-result" style="display: none;">
+      <div style="font-size: 40px;" id="res-icon">🎉</div>
+      <div class="result-val" id="res-points">+0</div>
+      <div class="result-msg" id="res-desc">恭喜获得奖励</div>
+      <button class="btn-close" onclick="closeModal()">开心收下</button>
     </div>
-  </div>
-  <div class="actions" style="text-align: center;">
-    <button class="ui button primary" onclick="$('#result-modal').modal('hide')">收下奖励</button>
   </div>
 </div>
 
 <script>
-let isOpening = false;
+let opening = false;
 
-function openMysteryBox() {
-  if (isOpening) return;
-  
-  const currentPoints = parseInt($('#display-points').text()) || 0;
-  if (currentPoints < 199) {
-    alert('积分不足，快去 AC 题目赚取积分吧！');
+function handleOpenBox() {
+  if (opening) return;
+
+  const ptsText = document.getElementById('user-points-val').innerText;
+  const currentPts = parseInt(ptsText, 10) || 0;
+
+  if (currentPts < 199) {
+    alert('积分不足 199，快去 AC 题目赚取积分吧！');
     return;
   }
 
-  isOpening = true;
-  $('#btn-buy-box').addClass('loading disabled');
-  $('#box-animating').show();
-  $('#box-result').hide();
-  $('#result-modal').modal({ closable: false }).modal('show');
+  opening = true;
+  const btn = document.getElementById('btn-open-box');
+  btn.disabled = true;
+  btn.innerText = '正在开启...';
 
-  // 发送购买请求
+  // 打开弹窗并处于 Loading 状态
+  const modal = document.getElementById('lottery-modal');
+  const loadingDiv = document.getElementById('modal-loading');
+  const resultDiv = document.getElementById('modal-result');
+  loadingDiv.style.display = 'block';
+  resultDiv.style.display = 'none';
+  modal.style.display = 'flex';
+
   fetch('/api/shop/buy_box', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' }
@@ -112,38 +390,59 @@ function openMysteryBox() {
   .then(res => res.json())
   .then(data => {
     setTimeout(() => {
-      $('#box-animating').hide();
-      $('#box-result').show();
-      
+      loadingDiv.style.display = 'none';
+      resultDiv.style.display = 'block';
+
       if (data.error) {
-        $('#result-text').css('color', '#db2828').text('开启失败');
-        $('#result-desc').text(data.error);
+        document.getElementById('res-icon').innerText = '❌';
+        document.getElementById('res-points').style.color = '#ef4444';
+        document.getElementById('res-points').innerText = '开启失败';
+        document.getElementById('res-desc').innerText = data.error;
       } else {
-        // 更新页面展示的最新积分
-        $('#display-points').text(data.userPoints);
-        
+        // 更新页面积分
+        document.getElementById('user-points-val').innerText = data.userPoints;
+
         const reward = data.reward;
+        const resPtsElem = document.getElementById('res-points');
+        const resDescElem = document.getElementById('res-desc');
+        const resIconElem = document.getElementById('res-icon');
+
+        resPtsElem.innerText = '+' + reward;
+
         if (reward >= 888) {
-          $('#result-text').css('color', '#f2711c').text('+' + reward + ' 积分！🎉');
-          $('#result-desc').text('欧气爆棚！恭喜斩获稀有大奖！');
+          resIconElem.innerText = '🌟';
+          resPtsElem.style.color = '#f59e0b';
+          resDescElem.innerText = '欧气大爆发！斩获超稀有大奖！';
         } else if (reward >= 199) {
-          $('#result-text').css('color', '#21ba45').text('+' + reward + ' 积分');
-          $('#result-desc').text('运气不错，保本或小赚一笔！');
+          resIconElem.innerText = '✨';
+          resPtsElem.style.color = '#10b981';
+          resDescElem.innerText = '运气不错，保本并小赚一笔！';
+        } else if (reward > 0) {
+          resIconElem.innerText = '🪙';
+          resPtsElem.style.color = '#64748b';
+          resDescElem.innerText = '回血一波，再接再厉！';
         } else {
-          $('#result-text').css('color', '#767676').text('+' + reward + ' 积分');
-          $('#result-desc').text('差一点就回本，下次一定！');
+          resIconElem.innerText = '💨';
+          resPtsElem.style.color = '#94a3b8';
+          resDescElem.innerText = '空空如也，下次一定出金！';
         }
       }
-      isOpening = false;
-      $('#btn-buy-box').removeClass('loading disabled');
-    }, 600);
+      opening = false;
+      btn.disabled = false;
+      btn.innerText = '立即开启盲盒';
+    }, 650);
   })
   .catch(err => {
     alert('网络异常，请重试');
-    $('#result-modal').modal('hide');
-    isOpening = false;
-    $('#btn-buy-box').removeClass('loading disabled');
+    closeModal();
+    opening = false;
+    btn.disabled = false;
+    btn.innerText = '立即开启盲盒';
   });
+}
+
+function closeModal() {
+  document.getElementById('lottery-modal').style.display = 'none';
 }
 </script>
 {% endblock %}
