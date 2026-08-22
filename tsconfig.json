@@ -7,5 +7,5 @@
     "strict": false,
     "skipLibCheck": true
   },
-  "include": ["index.ts", "frontend/**/*"]
+  "include": ["index.ts"]
 }
