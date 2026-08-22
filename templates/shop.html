@@ -1,0 +1,149 @@
+{% extends "layout/basic.html" %}
+{% block content %}
+<div class="ui container" style="margin-top: 25px; margin-bottom: 50px;">
+  <!-- 头部信息 -->
+  <div class="ui segment secondary clearing" style="border-radius: 12px; padding: 20px;">
+    <h2 class="ui left floated header" style="margin-bottom: 0;">
+      <i class="shopping bag icon" style="color: #f2711c;"></i>
+      <div class="content">
+        积分商城
+        <div class="sub header">通过刷题积累积分，抽取惊喜盲盒或兑换道具</div>
+      </div>
+    </h2>
+    <div class="ui right floated statistic" style="margin: 0;">
+      <div class="value" style="color: #f2711c;" id="display-points">
+        {{ userPoints }}
+      </div>
+      <div class="label">我的积分</div>
+    </div>
+  </div>
+
+  <!-- 商品列表 -->
+  <div class="ui three stackable cards" style="margin-top: 15px;">
+    <!-- 盲盒商品卡片 -->
+    <div class="ui card" style="border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.08);">
+      <div class="image" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); text-align: center; padding: 35px 0;">
+        <i class="cube icon" style="font-size: 5rem; color: #fff; text-shadow: 0 4px 12px rgba(0,0,0,0.2);"></i>
+      </div>
+      <div class="content">
+        <div class="header">幸运积分盲盒</div>
+        <div class="meta" style="margin-top: 5px;">
+          <span class="price" style="font-size: 1.2rem; font-weight: bold; color: #e03997;">
+            <i class="coins icon"></i> 199 积分 / 次
+          </span>
+        </div>
+        <div class="description" style="margin-top: 10px; color: #666; font-size: 0.92rem;">
+          开启随机获得 <b>0 ~ 1999</b> 积分！理论数学期望为 199 积分（严格保本设计，公平公正）。
+        </div>
+      </div>
+      <div class="extra content" style="background: #fafafa;">
+        <button class="ui fluid button purple" id="btn-buy-box" onclick="openMysteryBox()">
+          <i class="gift icon"></i> 立即开启 (199积分)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 概率说明 -->
+  <div class="ui segment" style="border-radius: 12px; margin-top: 30px;">
+    <h4 class="ui header"><i class="info circle icon"></i> 盲盒概率与奖项分布</h4>
+    <table class="ui celled compact table center aligned">
+      <thead>
+        <tr>
+          <th>奖项</th>
+          <th>获得积分</th>
+          <th>获得概率</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="positive"><td>特等奖</td><td><b>1999</b> 积分</td><td>1.0%</td></tr>
+        <tr class="positive"><td>一等奖</td><td><b>888</b> 积分</td><td>4.0%</td></tr>
+        <tr class="warning"><td>二等奖</td><td><b>399</b> 积分</td><td>15.8%</td></tr>
+        <tr><td>保本奖</td><td><b>199</b> 积分</td><td>19.2%</td></tr>
+        <tr class="negative"><td>回血奖</td><td><b>99</b> 积分</td><td>38.0%</td></tr>
+        <tr class="negative"><td>小亏奖</td><td><b>66</b> 积分</td><td>7.0%</td></tr>
+        <tr class="error"><td>谢谢惠顾</td><td><b>0</b> 积分</td><td>15.0%</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- 开箱动效 Modal -->
+<div class="ui mini modal" id="result-modal" style="text-align: center; border-radius: 12px;">
+  <div class="header">🎁 盲盒开奖</div>
+  <div class="content" style="padding: 30px 20px;">
+    <div id="box-animating">
+      <i class="spinner loading icon" style="font-size: 3rem; color: #764ba2;"></i>
+      <p style="margin-top: 15px; font-weight: bold; color: #555;">正在揭晓惊喜...</p>
+    </div>
+    <div id="box-result" style="display: none;">
+      <h1 id="result-text" style="font-size: 2.6rem; margin: 10px 0;"></h1>
+      <p id="result-desc" style="color: #666;"></p>
+    </div>
+  </div>
+  <div class="actions" style="text-align: center;">
+    <button class="ui button primary" onclick="$('#result-modal').modal('hide')">收下奖励</button>
+  </div>
+</div>
+
+<script>
+let isOpening = false;
+
+function openMysteryBox() {
+  if (isOpening) return;
+  
+  const currentPoints = parseInt($('#display-points').text()) || 0;
+  if (currentPoints < 199) {
+    alert('积分不足，快去 AC 题目赚取积分吧！');
+    return;
+  }
+
+  isOpening = true;
+  $('#btn-buy-box').addClass('loading disabled');
+  $('#box-animating').show();
+  $('#box-result').hide();
+  $('#result-modal').modal({ closable: false }).modal('show');
+
+  // 发送购买请求
+  fetch('/api/shop/buy_box', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  })
+  .then(res => res.json())
+  .then(data => {
+    setTimeout(() => {
+      $('#box-animating').hide();
+      $('#box-result').show();
+      
+      if (data.error) {
+        $('#result-text').css('color', '#db2828').text('开启失败');
+        $('#result-desc').text(data.error);
+      } else {
+        // 更新页面展示的最新积分
+        $('#display-points').text(data.userPoints);
+        
+        const reward = data.reward;
+        if (reward >= 888) {
+          $('#result-text').css('color', '#f2711c').text('+' + reward + ' 积分！🎉');
+          $('#result-desc').text('欧气爆棚！恭喜斩获稀有大奖！');
+        } else if (reward >= 199) {
+          $('#result-text').css('color', '#21ba45').text('+' + reward + ' 积分');
+          $('#result-desc').text('运气不错，保本或小赚一笔！');
+        } else {
+          $('#result-text').css('color', '#767676').text('+' + reward + ' 积分');
+          $('#result-desc').text('差一点就回本，下次一定！');
+        }
+      }
+      isOpening = false;
+      $('#btn-buy-box').removeClass('loading disabled');
+    }, 600);
+  })
+  .catch(err => {
+    alert('网络异常，请重试');
+    $('#result-modal').modal('hide');
+    isOpening = false;
+    $('#btn-buy-box').removeClass('loading disabled');
+  });
+}
+</script>
+{% endblock %}
