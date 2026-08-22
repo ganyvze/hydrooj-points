@@ -161,6 +161,20 @@ body.dark {
   font-size: 54px;
   filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.15));
 }
+
+.banner-box {
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+}
+.banner-color-name {
+  background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 50%, #06b6d4 100%);
+}
+.btn-buy.pink {
+  background: #db2777;
+}
+.btn-buy.pink:hover {
+  background: #be185d;
+}
+
 .product-tag {
   position: absolute;
   top: 12px;
@@ -363,6 +377,22 @@ body.dark {
         </button>
       </div>
     </div>
+    <div class="product-card">
+    <div class="product-banner banner-color-name">
+      <span class="product-tag">✨ 个性特效</span>
+      <div class="icon">🌈</div>
+    </div>
+    <div class="product-body">
+      <h3 class="product-name">彩色用户名（1天）</h3>
+      <div class="product-price">299 积分 / 天</div>
+      <p class="product-desc">
+        兑换后在个人主页（/user/）展示炫彩流光动画用户名，<b>全站所有人可见</b>！多次兑换时间自动累加。
+      </p>
+      <button class="btn-buy pink" id="btn-buy-color" onclick="handleBuyColorName()">
+        立即兑换特效 (299积分)
+      </button>
+    </div>
+  </div>
   </div>
 
   <!-- 概率公示 -->
@@ -523,5 +553,42 @@ function handleOpenBox() {
 function closeModal() {
   document.getElementById('lottery-modal').style.display = 'none';
 }
+
+// 购买彩色用户名
+function handleBuyColorName() {
+  if (processing) return;
+  const currentPts = parseInt($('#user-points-val').text(), 10) || 0;
+  if (currentPts < 299) {
+    alert('积分不足，快去 AC 题目赚取积分吧！');
+    return;
+  }
+
+  processing = true;
+  showModalLoading('正在为您装扮特效...');
+
+  fetch('/api/shop/buy_color_name', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  })
+  .then(res => res.json())
+  .then(data => {
+    setTimeout(() => {
+      if (data.error) {
+        showModalResult('❌', '兑换失败', data.error, '#ef4444');
+      } else {
+        $('#user-points-val').text(data.userPoints);
+        const expireDate = new Date(data.colorNameExpire).toLocaleString();
+        showModalResult('🌈', '兑换成功！', `彩色用户名已激活，有效期至：${expireDate}`, '#ec4899');
+      }
+      processing = false;
+    }, 600);
+  })
+  .catch(() => {
+    alert('网络异常，请重试');
+    closeModal();
+    processing = false;
+  });
+}
+
 </script>
 {% endblock %}

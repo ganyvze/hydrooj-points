@@ -1,30 +1,29 @@
-import { Context, STATUS, db, MessageModel, Handler, UserError, PermissionError } from 'hydrooj';
+import { Context, STATUS, db, MessageModel, Handler, PermissionError } from 'hydrooj';
 
-// 盲盒奖项与严格不赚不亏概率配置表 (总权重 1000)
+const BOX_PRICE = 199;
+const COLOR_NAME_PRICE = 299; // 彩色用户名价格 (299积分/天)
+
 const BOX_PRIZES = [
-  { points: 1999, weight: 10 },  // 1.0%
-  { points: 888,  weight: 40 },  // 4.0%
-  { points: 399,  weight: 158 }, // 15.8%
-  { points: 199,  weight: 192 }, // 19.2%
-  { points: 99,   weight: 380 }, // 38.0%
-  { points: 66,   weight: 70 },  // 7.0%
-  { points: 0,    weight: 150 }, // 15.0%
+  { points: 1999, weight: 10 },
+  { points: 888,  weight: 40 },
+  { points: 399,  weight: 158 },
+  { points: 199,  weight: 192 },
+  { points: 99,   weight: 380 },
+  { points: 66,   weight: 70 },
+  { points: 0,    weight: 150 },
 ];
 
-// 根据权重抽取盲盒结果
 function rollMysteryBox(): number {
-  const rand = Math.floor(Math.random() * 1000); // [0, 999]
+  const rand = Math.floor(Math.random() * 1000);
   let accumulated = 0;
   for (const prize of BOX_PRIZES) {
     accumulated += prize.weight;
-    if (rand < accumulated) {
-      return prize.points;
-    }
+    if (rand < accumulated) return prize.points;
   }
   return 0;
 }
 
-// 1. 商城页面 Handler (GET /shop)
+// 1. 商城页面
 class ShopHandler extends Handler {
   async get() {
     if (!this.user._id || this.user._id <= 1) {
@@ -35,35 +34,28 @@ class ShopHandler extends Handler {
     this.response.template = 'shop.html';
     this.response.body = {
       userPoints: udoc?.points || 0,
+      colorNameExpire: udoc?.colorNameExpire || null,
     };
   }
 }
 
-// 2. 盲盒购买 API Handler (POST /api/shop/buy_box)
+// 2. 盲盒购买 API
 class BuyBoxHandler extends Handler {
   async post() {
     const uid = this.user._id;
-    if (!uid || uid <= 1) {
-      throw new PermissionError('请先登录');
-    }
+    if (!uid || uid <= 1) throw new PermissionError('请先登录');
 
-    const BOX_PRICE = 199;
-
-    // (1) 原子扣除 199 积分，确保并发防透支
     const deductRes = await db.collection('user').updateOne(
       { _id: uid, points: { $gte: BOX_PRICE } },
       { $inc: { points: -BOX_PRICE } }
     );
 
     if (deductRes.matchedCount === 0) {
-      this.response.body = { error: '积分不足，无法开启盲盒' };
+      this.response.body = { error: '积分不足 199，无法开启盲盒' };
       return;
     }
 
-    // (2) 抽取奖励
     const reward = rollMysteryBox();
-
-    // (3) 如果中奖积分 > 0，增加积分
     if (reward > 0) {
       await db.collection('user').updateOne(
         { _id: uid },
@@ -71,7 +63,6 @@ class BuyBoxHandler extends Handler {
       );
     }
 
-    // (4) 记录商城抽奖流水
     await db.collection('point_log').insertOne({
       uid,
       type: 'shop_mystery_box',
@@ -81,9 +72,7 @@ class BuyBoxHandler extends Handler {
       createdAt: new Date(),
     });
 
-    // (5) 获取用户最新积分并返回
     const updatedUser = await db.collection('user').findOne({ _id: uid });
-
     this.response.body = {
       reward,
       userPoints: updatedUser?.points || 0,
@@ -91,12 +80,83 @@ class BuyBoxHandler extends Handler {
   }
 }
 
+// 3. 购买彩色用户名 API
+class BuyColorNameHandler extends Handler {
+  async post() {
+    const uid = this.user._id;
+    if (!uid || uid <= 1) throw new PermissionError('请先登录');
+
+    // 原子扣费
+    const deductRes = await db.collection('user').updateOne(
+      { _id: uid, points: { $gte: COLOR_NAME_PRICE } },
+      { $inc: { points: -COLOR_NAME_PRICE } }
+    );
+
+    if (deductRes.matchedCount === 0) {
+      this.response.body = { error: `积分不足 ${COLOR_NAME_PRICE}，无法兑换` };
+      return;
+    }
+
+    // 计算到期时间（若已有生效时间则自动叠加 24 小时）
+    const now = Date.now();
+    const udoc = await db.collection('user').findOne({ _id: uid });
+    let baseTime = now;
+    if (udoc?.colorNameExpire && new Date(udoc.colorNameExpire).getTime() > now) {
+      baseTime = new Date(udoc.colorNameExpire).getTime();
+    }
+    const expireAt = new Date(baseTime + 24 * 60 * 60 * 1000);
+
+    await db.collection('user').updateOne(
+      { _id: uid },
+      { $set: { colorNameExpire: expireAt } }
+    );
+
+    await db.collection('point_log').insertOne({
+      uid,
+      type: 'shop_buy_color_name',
+      cost: COLOR_NAME_PRICE,
+      durationDays: 1,
+      expireAt,
+      createdAt: new Date(),
+    });
+
+    const updatedUser = await db.collection('user').findOne({ _id: uid });
+    this.response.body = {
+      success: true,
+      userPoints: updatedUser?.points || 0,
+      colorNameExpire: expireAt,
+    };
+  }
+}
+
+// 4. 公开查询用户特效 API（用于个人主页判断）
+class UserEffectHandler extends Handler {
+  async get() {
+    const targetUid = parseInt(this.request.query.uid as string, 10);
+    if (!targetUid || targetUid <= 1) {
+      this.response.body = { isColorName: false };
+      return;
+    }
+
+    const udoc = await db.collection('user').findOne({ _id: targetUid });
+    const now = Date.now();
+    const isColorName = !!(udoc?.colorNameExpire && new Date(udoc.colorNameExpire).getTime() > now);
+
+    this.response.body = {
+      isColorName,
+      expireAt: udoc?.colorNameExpire || null,
+    };
+  }
+}
+
 export function apply(ctx: Context) {
-  // 注册商城页面与开箱接口路由
+  // 注册商城及特效路由
   ctx.Route('shop_page', '/shop', ShopHandler);
   ctx.Route('shop_buy_box', '/api/shop/buy_box', BuyBoxHandler);
+  ctx.Route('shop_buy_color_name', '/api/shop/buy_color_name', BuyColorNameHandler);
+  ctx.Route('shop_user_effect', '/api/shop/user_effect', UserEffectHandler);
 
-  // 数据库索引
+  // 索引初始化
   ctx.on('ready', async () => {
     try {
       await db.collection('point_log').createIndex(
@@ -108,7 +168,7 @@ export function apply(ctx: Context) {
     }
   });
 
-  // AC 题目奖励监听
+  // AC 奖励逻辑
   ctx.on('record/judge', async (rdoc) => {
     try {
       if (!rdoc || !rdoc.uid || rdoc.uid <= 1) return;
@@ -126,7 +186,6 @@ export function apply(ctx: Context) {
 
       if (hasRewarded) return;
 
-      // 10 ~ 100 随机积分
       const rewardPoints = Math.floor(Math.random() * 91) + 10;
 
       await db.collection('user').updateOne(
@@ -145,8 +204,6 @@ export function apply(ctx: Context) {
         createdAt: new Date(),
       });
 
-      console.log(`[Points Plugin] 用户 ${uid} 首次 AC 题目 P${pid}，获得 ${rewardPoints} 积分`);
-
       try {
         await MessageModel.send(
           1,
@@ -157,7 +214,7 @@ export function apply(ctx: Context) {
         console.warn('[Points Plugin] 发送积分通知失败:', msgErr);
       }
     } catch (err) {
-      console.error('[Points Plugin] 处理积分奖励时发生异常:', err);
+      console.error('[Points Plugin] 处理积分奖励异常:', err);
     }
   });
 }
