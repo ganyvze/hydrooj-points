@@ -444,12 +444,13 @@ class PointsManageMainHandler extends PointsManageHandler {
   }
 }
 
-// 控制面板：用户积分详情、流水与修改操作（实现各 post[Operation] 分发方法）
+// 控制面板：用户积分详情、流水与修改操作
 class PointsManageDetailHandler extends PointsManageHandler {
   @param('uid', Types.Int)
   @param('page', Types.PositiveInt, true)
   async get(domainId: string, uid: number, page = 1) {
-    const udoc = await UserModel.getById(domainId, uid);
+    // ✅ 直接从数据库中读取完整用户文档（包含 points 与特权到期时间）
+    const udoc = await db.collection('user').findOne({ _id: uid });
     if (!udoc) throw new UserNotFoundError(uid);
 
     const limit = 20;
@@ -493,13 +494,13 @@ class PointsManageDetailHandler extends PointsManageHandler {
     };
   }
 
-  // 1. 对应 operation=grant
+  // 1. 奖励积分 (operation=grant)
   @param('uid', Types.Int)
   @param('amount', Types.Int)
   @param('reason', Types.String, true)
   async postGrant(domainId: string, uid: number, amount: number, reason = '管理员发放积分') {
     if (!amount || amount <= 0) throw new ValidationError('amount', '发放积分数值必须大于 0');
-    const udoc = await UserModel.getById(domainId, uid);
+    const udoc = await db.collection('user').findOne({ _id: uid });
     if (!udoc) throw new UserNotFoundError(uid);
 
     const operatorUid = this.user._id;
@@ -528,13 +529,13 @@ class PointsManageDetailHandler extends PointsManageHandler {
     this.back();
   }
 
-  // 2. 对应 operation=deduct
+  // 2. 扣除积分 (operation=deduct)
   @param('uid', Types.Int)
   @param('amount', Types.Int)
   @param('reason', Types.String, true)
   async postDeduct(domainId: string, uid: number, amount: number, reason = '管理员扣除积分') {
     if (!amount || amount <= 0) throw new ValidationError('amount', '扣除积分数值必须大于 0');
-    const udoc = await UserModel.getById(domainId, uid);
+    const udoc = await db.collection('user').findOne({ _id: uid });
     if (!udoc) throw new UserNotFoundError(uid);
 
     const operatorUid = this.user._id;
@@ -566,7 +567,7 @@ class PointsManageDetailHandler extends PointsManageHandler {
     this.back();
   }
 
-  // 3. 对应 operation=setPoints
+  // 3. 强制重置积分 (operation=setPoints)
   @param('uid', Types.Int)
   @param('targetPoints', Types.Int)
   @param('reason', Types.String, true)
@@ -574,7 +575,7 @@ class PointsManageDetailHandler extends PointsManageHandler {
     if (isNaN(targetPoints) || targetPoints < 0) {
       throw new ValidationError('targetPoints', '目标积分不能为负数');
     }
-    const udoc = await UserModel.getById(domainId, uid);
+    const udoc = await db.collection('user').findOne({ _id: uid });
     if (!udoc) throw new UserNotFoundError(uid);
 
     const operatorUid = this.user._id;
@@ -598,13 +599,13 @@ class PointsManageDetailHandler extends PointsManageHandler {
     this.back();
   }
 
-  // 4. 对应 operation=setPerk
+  // 4. 特权道具管理 (operation=setPerk)
   @param('uid', Types.Int)
   @param('perkType', Types.String)
   @param('action', Types.String)
   @param('days', Types.Int, true)
   async postSetPerk(domainId: string, uid: number, perkType: string, action: string, days = 1) {
-    const udoc = await UserModel.getById(domainId, uid);
+    const udoc = await db.collection('user').findOne({ _id: uid });
     if (!udoc) throw new UserNotFoundError(uid);
 
     const operatorUid = this.user._id;
