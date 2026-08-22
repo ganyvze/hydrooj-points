@@ -719,16 +719,28 @@ export function apply(ctx: Context) {
 
   // 6. 拦截自闭卡主页访问
   ctx.on('handler/after/UserDetail', async (h) => {
-    const targetUser = h.response.body?.udoc;
-    if (!targetUser) return;
-    const now = Date.now();
-    const isSolitude = targetUser.solitudeExpire && new Date(targetUser.solitudeExpire).getTime() > now;
-    if (isSolitude) {
-      if (!h.user?._id || (h.user._id !== targetUser._id && !h.user.hasPriv(PRIV.PRIV_EDIT_SYSTEM))) {
-        throw new PermissionError('该用户正在自闭中，个人主页暂不可访问');
-      }
-    }
-  });
+  const targetUser = h.response.body?.udoc;
+  const targetUid = targetUser?._id || parseInt(h.request.params.uid as string, 10);
+  if (!targetUid || targetUid <= 1) return;
+
+  // 访问者本人或超级管理员允许访问
+  if (h.user?._id === targetUid || h.user?.hasPriv(PRIV.PRIV_EDIT_SYSTEM)) {
+    return;
+  }
+
+  // 直接从数据库查询该用户真实的自闭卡到期时间
+  const udoc = await db.collection('user').findOne(
+    { _id: targetUid },
+    { projection: { solitudeExpire: 1 } }
+  );
+
+  const now = Date.now();
+  const isSolitude = !!(udoc?.solitudeExpire && new Date(udoc.solitudeExpire).getTime() > now);
+
+  if (isSolitude) {
+    throw new PermissionError('🤐 该用户已开启自闭卡，个人主页暂不可访问');
+  }
+});
 
   // 7. AC 奖励监听
   ctx.on('record/judge', async (rdoc) => {
