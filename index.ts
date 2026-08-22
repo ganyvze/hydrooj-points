@@ -9,6 +9,7 @@ import {
   ValidationError,
   UserNotFoundError,
   PermissionError,
+  ForbiddenError,
   MessageModel,
   ProblemModel,
   STATUS,
@@ -718,17 +719,16 @@ export function apply(ctx: Context) {
   });
 
   // 6. 拦截自闭卡主页访问
-  ctx.on('handler/after/UserDetail', async (h) => {
-  const targetUser = h.response.body?.udoc;
-  const targetUid = targetUser?._id || parseInt(h.request.params.uid as string, 10);
+  ctx.on('handler/before/UserDetail', async (that) => {
+  const targetUid = parseInt(that.args?.uid || that.request?.params?.uid, 10);
   if (!targetUid || targetUid <= 1) return;
 
   // 访问者本人或超级管理员允许访问
-  if (h.user?._id === targetUid || h.user?.hasPriv(PRIV.PRIV_EDIT_SYSTEM)) {
+  if (that.user?._id === targetUid || that.user?.hasPriv(PRIV.PRIV_EDIT_SYSTEM)) {
     return;
   }
 
-  // 直接从数据库查询该用户真实的自闭卡到期时间
+  // 查询目标用户的自闭卡是否生效中
   const udoc = await db.collection('user').findOne(
     { _id: targetUid },
     { projection: { solitudeExpire: 1 } }
@@ -738,7 +738,7 @@ export function apply(ctx: Context) {
   const isSolitude = !!(udoc?.solitudeExpire && new Date(udoc.solitudeExpire).getTime() > now);
 
   if (isSolitude) {
-    throw new PermissionError('🤐 该用户已开启自闭卡，个人主页暂不可访问');
+    throw new ForbiddenError('🤐 该用户已开启自闭卡，个人主页暂不可访问');
   }
 });
 
