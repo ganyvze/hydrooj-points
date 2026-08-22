@@ -1,0 +1,413 @@
+{% extends "layout/basic.html" %}
+{% block content %}
+<style>
+.p-manage-container {
+  max-width: 1200px;
+  margin: 20px auto;
+  padding: 0 16px 40px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+.p-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.p-stat-card {
+  background: var(--card-bg, #ffffff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+.p-stat-icon {
+  font-size: 32px;
+}
+.p-stat-info .num {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--text-color, #0f172a);
+}
+.p-stat-info .label {
+  font-size: 13px;
+  color: var(--text-secondary, #64748b);
+  margin-top: 2px;
+}
+.p-tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 2px solid var(--border-color, #e2e8f0);
+  margin-bottom: 20px;
+}
+.p-tab-item {
+  padding: 10px 20px;
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--text-secondary, #64748b);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+}
+.p-tab-item.active {
+  color: #4f46e5;
+  border-bottom-color: #4f46e5;
+}
+.p-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+  align-items: center;
+  justify-content: space-between;
+}
+.p-filter-form {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.p-input {
+  padding: 8px 12px;
+  border: 1px solid var(--border-color, #cbd5e1);
+  border-radius: 8px;
+  font-size: 14px;
+  background: var(--input-bg, #ffffff);
+  color: var(--text-color, #0f172a);
+}
+.p-btn {
+  padding: 8px 16px;
+  background: #4f46e5;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.p-btn:hover { background: #4338ca; }
+.p-btn-secondary {
+  background: var(--btn-sec-bg, #f1f5f9);
+  color: var(--btn-sec-color, #334155);
+  border: 1px solid var(--border-color, #cbd5e1);
+}
+.p-btn-secondary:hover { background: #e2e8f0; }
+
+.p-table-card {
+  background: var(--card-bg, #ffffff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+.p-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  text-align: left;
+}
+.p-table th {
+  background: var(--table-header-bg, #f8fafc);
+  color: var(--text-secondary, #64748b);
+  padding: 12px 16px;
+  font-weight: 600;
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+}
+.p-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-color, #f1f5f9);
+  color: var(--text-color, #1e293b);
+  vertical-align: middle;
+}
+.p-table tr:hover td {
+  background: var(--table-hover-bg, #f8fafc);
+}
+.p-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-right: 4px;
+}
+.p-badge-points {
+  background: #fef3c7;
+  color: #b45309;
+  font-weight: 800;
+  font-size: 14px;
+}
+.p-badge-rainbow { background: #fdf2f8; color: #db2777; border: 1px solid #fbcfe8; }
+.p-badge-double { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+.p-badge-solitude { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+
+.p-amount-pos { color: #16a34a; font-weight: 700; }
+.p-amount-neg { color: #dc2626; font-weight: 700; }
+
+.p-pagination {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+.p-page-btn {
+  padding: 6px 14px;
+  border: 1px solid var(--border-color, #cbd5e1);
+  border-radius: 6px;
+  color: var(--text-color, #334155);
+  text-decoration: none;
+  font-size: 14px;
+  background: var(--card-bg, #ffffff);
+}
+.p-page-btn.active {
+  background: #4f46e5;
+  color: #ffffff;
+  border-color: #4f46e5;
+}
+</style>
+
+<div class="p-manage-container">
+  <!-- 标题与面包屑 -->
+  <div style="margin-bottom: 20px;">
+    <h2 style="margin: 0; font-size: 24px; font-weight: 800;">👑 积分系统管理</h2>
+    <p style="margin: 4px 0 0 0; color: #64748b; font-size: 14px;">超级管理员控制台：查看全站积分概况、搜索用户、调整积分与查询流水</p>
+  </div>
+
+  <!-- 数据概览 -->
+  <div class="p-stat-grid">
+    <div class="p-stat-card">
+      <div class="p-stat-icon">💰</div>
+      <div class="p-stat-info">
+        <div class="num">{{ stats.totalPoints }}</div>
+        <div class="label">全站流通积分总量</div>
+      </div>
+    </div>
+    <div class="p-stat-card">
+      <div class="p-stat-icon">👥</div>
+      <div class="p-stat-info">
+        <div class="num">{{ stats.totalUsersWithPoints }}</div>
+        <div class="label">持有积分的用户数</div>
+      </div>
+    </div>
+    <div class="p-stat-card">
+      <div class="p-stat-icon">⚡</div>
+      <div class="p-stat-info">
+        <div class="num">{{ stats.activePerksCount }}</div>
+        <div class="label">当前生效中的特权卡</div>
+      </div>
+    </div>
+    <div class="p-stat-card">
+      <div class="p-stat-icon">📜</div>
+      <div class="p-stat-info">
+        <div class="num">{{ stats.totalLogsCount }}</div>
+        <div class="label">全站流水总记录数</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 选项卡切换 -->
+  <div class="p-tabs">
+    <a href="/manage/points?tab=users" class="p-tab-item {% if tab == 'users' %}active{% endif %}">👤 用户积分列表</a>
+    <a href="/manage/points?tab=logs" class="p-tab-item {% if tab == 'logs' %}active{% endif %}">📑 全站积分流水</a>
+  </div>
+
+  <!-- TAB 1: 用户列表 -->
+  {% if tab == 'users' %}
+  <div class="p-filter-bar">
+    <form method="get" action="/manage/points" class="p-filter-form">
+      <input type="hidden" name="tab" value="users">
+      <input class="p-input" type="text" name="search" value="{{ search }}" placeholder="搜索 UID / 用户名 / 邮箱" style="width: 260px;">
+      <select class="p-input" name="sort">
+        <option value="points_desc" {% if sort == 'points_desc' %}selected{% endif %}>按积分降序 (最高优先)</option>
+        <option value="points_asc" {% if sort == 'points_asc' %}selected{% endif %}>按积分升序</option>
+        <option value="_id_asc" {% if sort == '_id_asc' %}selected{% endif %}>按 UID 升序</option>
+        <option value="_id_desc" {% if sort == '_id_desc' %}selected{% endif %}>按 UID 降序</option>
+        <option value="loginat_desc" {% if sort == 'loginat_desc' %}selected{% endif %}>按最后登录时间</option>
+      </select>
+      <button type="submit" class="p-btn">🔍 筛选</button>
+      {% if search or sort != 'points_desc' %}
+        <a href="/manage/points?tab=users" class="p-btn p-btn-secondary">重置</a>
+      {% endif %}
+    </form>
+  </div>
+
+  <div class="p-table-card">
+    <table class="p-table">
+      <thead>
+        <tr>
+          <th>UID</th>
+          <th>用户名</th>
+          <th>邮箱</th>
+          <th>积分余额</th>
+          <th>生效中特权</th>
+          <th>最后登录</th>
+          <th style="text-align: right;">管理操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in udocs %}
+        <tr>
+          <td><b>#{{ u._id }}</b></td>
+          <td>
+            <a href="/user/{{ u._id }}" target="_blank" style="font-weight: 600; text-decoration: none; color: #4f46e5;">
+              {{ u.uname }}
+            </a>
+          </td>
+          <td>{{ u.mail or '-' }}</td>
+          <td>
+            <span class="p-badge p-badge-points">🪙 {{ u.points or 0 }}</span>
+          </td>
+          <td>
+            {% set hasPerk = false %}
+            {% if u.colorNameExpire and u.colorNameExpire.getTime() > now %}
+              <span class="p-badge p-badge-rainbow">🌈 炫彩名</span>
+              {% set hasPerk = true %}
+            {% endif %}
+            {% if u.doublePointsExpire and u.doublePointsExpire.getTime() > now %}
+              <span class="p-badge p-badge-double">⚡ 翻倍卡</span>
+              {% set hasPerk = true %}
+            {% endif %}
+            {% if u.solitudeExpire and u.solitudeExpire.getTime() > now %}
+              <span class="p-badge p-badge-solitude">🤐 自闭中</span>
+              {% set hasPerk = true %}
+            {% endif %}
+            {% if not hasPerk %}
+              <span style="color: #94a3b8; font-size: 13px;">无</span>
+            {% endif %}
+          </td>
+          <td style="color: #64748b; font-size: 13px;">
+            {{ moment(u.loginat).format('YYYY-MM-DD HH:mm') if u.loginat else '从未' }}
+          </td>
+          <td style="text-align: right;">
+            <a href="/manage/points/{{ u._id }}" class="p-btn" style="padding: 5px 12px; font-size: 13px;">
+              ⚙️ 详情 / 调整积分
+            </a>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="7" style="text-align: center; padding: 40px; color: #94a3b8;">未找到符合条件的用户</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  <!-- TAB 2: 全站流水记录 -->
+  {% if tab == 'logs' %}
+  <div class="p-filter-bar">
+    <form method="get" action="/manage/points" class="p-filter-form">
+      <input type="hidden" name="tab" value="logs">
+      <input class="p-input" type="text" name="search" value="{{ search }}" placeholder="按 UID / 题目ID / 理由搜索" style="width: 280px;">
+      <button type="submit" class="p-btn">🔍 检索流水</button>
+      {% if search %}
+        <a href="/manage/points?tab=logs" class="p-btn p-btn-secondary">清空</a>
+      {% endif %}
+    </form>
+  </div>
+
+  <div class="p-table-card">
+    <table class="p-table">
+      <thead>
+        <tr>
+          <th>时间</th>
+          <th>用户</th>
+          <th>事件类型</th>
+          <th>积分变动</th>
+          <th>明细说明</th>
+          <th>操作员</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for l in logs %}
+        <tr>
+          <td style="color: #64748b; font-size: 13px;">
+            {{ moment(l.createdAt).format('YYYY-MM-DD HH:mm:ss') }}
+          </td>
+          <td>
+            <a href="/manage/points/{{ l.uid }}" style="font-weight: 600; text-decoration: none; color: #4f46e5;">
+              {{ userMap[l.uid] or ('UID:' + l.uid) }}
+            </a>
+          </td>
+          <td>
+            {% if l.type == 'problem_ac' %}
+              <span class="p-badge" style="background:#ecfdf5; color:#059669;">题解 AC 奖励</span>
+            {% elif l.type == 'shop_mystery_box' %}
+              <span class="p-badge" style="background:#e0e7ff; color:#4338ca;">开启盲盒</span>
+            {% elif l.type == 'shop_buy_color_name' %}
+              <span class="p-badge" style="background:#fdf2f8; color:#db2777;">兑换彩色名</span>
+            {% elif l.type == 'shop_buy_double_card' %}
+              <span class="p-badge" style="background:#fffbeb; color:#d97706;">兑换翻倍卡</span>
+            {% elif l.type == 'shop_buy_solitude_card' %}
+              <span class="p-badge" style="background:#f1f5f9; color:#475569;">兑换自闭卡</span>
+            {% elif l.type == 'admin_grant' %}
+              <span class="p-badge" style="background:#dcfce7; color:#15803d;">管理员发放</span>
+            {% elif l.type == 'admin_deduct' %}
+              <span class="p-badge" style="background:#fee2e2; color:#b91c1c;">管理员扣除</span>
+            {% elif l.type == 'admin_set' %}
+              <span class="p-badge" style="background:#fef3c7; color:#b45309;">管理员重置</span>
+            {% else %}
+              <span class="p-badge" style="background:#f1f5f9; color:#475569;">{{ l.type }}</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if l.amount and l.amount > 0 %}
+              <span class="p-amount-pos">+{{ l.amount }}</span>
+            {% elif l.amount and l.amount < 0 %}
+              <span class="p-amount-neg">{{ l.amount }}</span>
+            {% elif l.net and l.net > 0 %}
+              <span class="p-amount-pos">+{{ l.net }}</span>
+            {% elif l.net and l.net < 0 %}
+              <span class="p-amount-neg">{{ l.net }}</span>
+            {% elif l.cost %}
+              <span class="p-amount-neg">-{{ l.cost }}</span>
+            {% else %}
+              <span style="color:#64748b;">0</span>
+            {% endif %}
+          </td>
+          <td>
+            <span style="font-size: 13px;">{{ l.reason or '-' }}</span>
+            {% if l.isDouble %}<span class="p-badge p-badge-double" style="margin-left: 6px;">⚡已翻倍</span>{% endif %}
+          </td>
+          <td style="color: #64748b; font-size: 13px;">
+            {% if l.operatorUid %}
+              <a href="/user/{{ l.operatorUid }}" target="_blank" style="text-decoration:none; color:#64748b;">
+                {{ userMap[l.operatorUid] or ('Admin#' + l.operatorUid) }}
+              </a>
+            {% else %}
+              系统自动
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="6" style="text-align: center; padding: 40px; color: #94a3b8;">暂无流水记录</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  <!-- 分页器 -->
+  {% if pageCount > 1 %}
+  <div class="p-pagination">
+    {% if page > 1 %}
+      <a href="/manage/points?tab={{ tab }}&page={{ page - 1 }}&search={{ search }}&sort={{ sort }}" class="p-page-btn">上一页</a>
+    {% endif %}
+    <span class="p-page-btn active">{{ page }} / {{ pageCount }}</span>
+    {% if page < pageCount %}
+      <a href="/manage/points?tab={{ tab }}&page={{ page + 1 }}&search={{ search }}&sort={{ sort }}" class="p-page-btn">下一页</a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

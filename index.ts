@@ -1,9 +1,56 @@
-import { Context, STATUS, db, MessageModel, Handler, PermissionError, ProblemModel, PRIV } from 'hydrooj';
+import {
+  Context,
+  Handler,
+  param,
+  PRIV,
+  Types,
+  UserModel,
+  DomainModel,
+  ValidationError,
+  UserNotFoundError,
+  PermissionError,
+  MessageModel,
+  ProblemModel,
+  STATUS,
+  db,
+  moment,
+} from 'hydrooj';
+
+declare module 'hydrooj' {
+  interface User {
+    points?: number;
+    colorNameExpire?: Date;
+    doublePointsExpire?: Date;
+    solitudeExpire?: Date;
+  }
+  interface Collections {
+    point_log: PointLogDoc;
+  }
+}
+
+export interface PointLogDoc {
+  _id?: any;
+  uid: number;
+  domainId?: string;
+  pid?: number;
+  rid?: any;
+  type: string;
+  amount?: number;
+  cost?: number;
+  reward?: number;
+  net?: number;
+  isDouble?: boolean;
+  durationDays?: number;
+  expireAt?: Date;
+  reason?: string;
+  operatorUid?: number;
+  createdAt: Date;
+}
 
 const BOX_PRICE = 199;
 const COLOR_NAME_PRICE = 299;    // 彩色用户名价格 (299积分/天)
 const DOUBLE_CARD_PRICE = 399;   // 积分翻倍卡价格 (399积分/24小时)
-const SOLITUDE_CARD_PRICE = 199;  // 自闭卡价格 (199积分/24小时)
+const SOLITUDE_CARD_PRICE = 199; // 自闭卡价格 (199积分/24小时)
 
 const BOX_PRIZES = [
   { points: 1999, weight: 10 },
@@ -25,7 +72,11 @@ function rollMysteryBox(): number {
   return 0;
 }
 
-// 1. 商城页面
+/* ==========================================================================
+   前台：用户商城相关 Handler
+   ========================================================================== */
+
+// 1. 商城主页
 class ShopHandler extends Handler {
   async get() {
     if (!this.user._id || this.user._id <= 1) {
@@ -43,7 +94,7 @@ class ShopHandler extends Handler {
   }
 }
 
-// 2. 盲盒购买 API
+// 2. 盲盒购买
 class BuyBoxHandler extends Handler {
   async post() {
     const uid = this.user._id;
@@ -64,7 +115,6 @@ class BuyBoxHandler extends Handler {
     const now = Date.now();
     const isDouble = !!(udoc?.doublePointsExpire && new Date(udoc.doublePointsExpire).getTime() > now);
 
-    // 翻倍卡对盲盒奖励同样生效
     if (isDouble && reward > 0) {
       reward *= 2;
     }
@@ -95,7 +145,7 @@ class BuyBoxHandler extends Handler {
   }
 }
 
-// 3. 购买彩色用户名 API（增加与自闭卡的互斥检测）
+// 3. 购买彩色用户名
 class BuyColorNameHandler extends Handler {
   async post() {
     const uid = this.user._id;
@@ -104,7 +154,6 @@ class BuyColorNameHandler extends Handler {
     const now = Date.now();
     const udoc = await db.collection('user').findOne({ _id: uid });
 
-    // 互斥校验：自闭卡生效中无法购买彩色用户名
     if (udoc?.solitudeExpire && new Date(udoc.solitudeExpire).getTime() > now) {
       this.response.body = { error: '自闭卡生效期间无法购买彩色用户名，请等待自闭卡过期！' };
       return;
@@ -149,7 +198,7 @@ class BuyColorNameHandler extends Handler {
   }
 }
 
-// 4. 购买积分翻倍卡 API
+// 4. 购买积分翻倍卡
 class BuyDoubleCardHandler extends Handler {
   async post() {
     const uid = this.user._id;
@@ -196,7 +245,7 @@ class BuyDoubleCardHandler extends Handler {
   }
 }
 
-// 5. 购买自闭卡 API（增加与彩色用户名的互斥检测）
+// 5. 购买自闭卡
 class BuySolitudeCardHandler extends Handler {
   async post() {
     const uid = this.user._id;
@@ -205,7 +254,6 @@ class BuySolitudeCardHandler extends Handler {
     const now = Date.now();
     const udoc = await db.collection('user').findOne({ _id: uid });
 
-    // 互斥校验：彩色用户名生效中无法购买自闭卡
     if (udoc?.colorNameExpire && new Date(udoc.colorNameExpire).getTime() > now) {
       this.response.body = { error: '彩色用户名生效期间无法开启自闭卡，请等待彩色名过期！' };
       return;
@@ -276,8 +324,327 @@ class UserEffectHandler extends Handler {
   }
 }
 
+/* ==========================================================================
+   后台：控制面板（超级管理员）积分管理 Handler
+   ========================================================================== */
+
+// 权限基类
+class PointsManageHandler extends Handler {
+  async prepare() {
+    this.checkPriv(PRIV.PRIV_EDIT_SYSTEM);
+  }
+}
+
+// 控制面板：积分管理列表与系统流水
+class PointsManageMainHandler extends PointsManageHandler {
+  @param('page', Types.PositiveInt, true)
+  @param('search', Types.String, true)
+  @param('sort', Types.String, true)
+  @param('tab', Types.String, true)
+  async get(domainId: string, page = 1, search = '', sort = 'points_desc', tab = 'users') {
+    const limit = 20;
+
+    // 统计概览数据
+    const totalPointsAgg = await db.collection('user').aggregate([
+      { $group: { _id: null, total: { $sum: { $ifNull: ['$points', 0] } } } }
+    ]).toArray();
+    const totalPoints = totalPointsAgg[0]?.total || 0;
+    const totalUsersWithPoints = await db.collection('user').countDocuments({ points: { $gt: 0 } });
+
+    const now = new Date();
+    const activePerksCount = await db.collection('user').countDocuments({
+      $or: [
+        { colorNameExpire: { $gt: now } },
+        { doublePointsExpire: { $gt: now } },
+        { solitudeExpire: { $gt: now } },
+      ],
+    });
+    const totalLogsCount = await db.collection('point_log').countDocuments();
+
+    if (tab === 'logs') {
+      // 查看全站日志
+      const query: any = {};
+      if (search) {
+        if (!isNaN(+search)) {
+          query.$or = [{ uid: +search }, { pid: +search }, { reason: new RegExp(search, 'i') }];
+        } else {
+          query.reason = new RegExp(search, 'i');
+        }
+      }
+
+      const [logs, pageCount] = await this.paginate(
+        db.collection('point_log').find(query).sort({ createdAt: -1 }),
+        page,
+        limit
+      );
+
+      const uids = Array.from(
+        new Set(logs.map((l) => l.uid).concat(logs.map((l) => l.operatorUid).filter(Boolean)))
+      );
+      const userList = await db
+        .collection('user')
+        .find({ _id: { $in: uids } })
+        .project({ _id: 1, uname: 1 })
+        .toArray();
+      const userMap = Object.fromEntries(userList.map((u) => [u._id, u.uname]));
+
+      this.response.template = 'points_manage_main.html';
+      this.response.body = {
+        tab: 'logs',
+        logs,
+        userMap,
+        page,
+        pageCount,
+        search,
+        sort,
+        stats: {
+          totalPoints,
+          totalUsersWithPoints,
+          activePerksCount,
+          totalLogsCount,
+        },
+        moment,
+      };
+      return;
+    }
+
+    // 默认：查看用户列表
+    const query: any = {};
+    if (search) {
+      const searchRegex = new RegExp(search, 'i');
+      query.$or = [
+        { uname: searchRegex },
+        { mail: searchRegex },
+        { _id: isNaN(+search) ? undefined : +search },
+      ].filter(Boolean);
+    }
+
+    const sortOptions: Record<string, any> = {
+      points_desc: { points: -1, _id: 1 },
+      points_asc: { points: 1, _id: 1 },
+      _id_asc: { _id: 1 },
+      _id_desc: { _id: -1 },
+      regat_desc: { regat: -1 },
+      loginat_desc: { loginat: -1 },
+    };
+    const sortQuery = sortOptions[sort] || { points: -1, _id: 1 };
+
+    const [udocs, pageCount] = await this.paginate(
+      UserModel.getMulti(query).sort(sortQuery),
+      page,
+      limit
+    );
+
+    this.response.template = 'points_manage_main.html';
+    this.response.body = {
+      tab: 'users',
+      udocs,
+      page,
+      pageCount,
+      search,
+      sort,
+      stats: {
+        totalPoints,
+        totalUsersWithPoints,
+        activePerksCount,
+        totalLogsCount,
+      },
+      now: Date.now(),
+      moment,
+    };
+  }
+}
+
+// 控制面板：用户积分详情、流水与修改操作
+class PointsManageDetailHandler extends PointsManageHandler {
+  @param('uid', Types.Int)
+  @param('page', Types.PositiveInt, true)
+  async get(domainId: string, uid: number, page = 1) {
+    const udoc = await UserModel.getById(domainId, uid);
+    if (!udoc) throw new UserNotFoundError(uid);
+
+    const limit = 20;
+    const [logs, pageCount] = await this.paginate(
+      db.collection('point_log').find({ uid }).sort({ createdAt: -1 }),
+      page,
+      limit
+    );
+
+    const operatorUids = Array.from(new Set(logs.map((l) => l.operatorUid).filter(Boolean)));
+    const opUsers = await db
+      .collection('user')
+      .find({ _id: { $in: operatorUids } })
+      .project({ _id: 1, uname: 1 })
+      .toArray();
+    const opUserMap = Object.fromEntries(opUsers.map((u) => [u._id, u.uname]));
+
+    const now = Date.now();
+    const isColorName = !!(udoc.colorNameExpire && new Date(udoc.colorNameExpire).getTime() > now);
+    const isDoublePoints = !!(udoc.doublePointsExpire && new Date(udoc.doublePointsExpire).getTime() > now);
+    const isSolitude = !!(udoc.solitudeExpire && new Date(udoc.solitudeExpire).getTime() > now);
+
+    this.response.template = 'points_manage_detail.html';
+    this.response.body = {
+      udoc,
+      points: udoc.points || 0,
+      perks: {
+        isColorName,
+        colorNameExpire: udoc.colorNameExpire,
+        isDoublePoints,
+        doublePointsExpire: udoc.doublePointsExpire,
+        isSolitude,
+        solitudeExpire: udoc.solitudeExpire,
+      },
+      logs,
+      opUserMap,
+      page,
+      pageCount,
+      now,
+      moment,
+    };
+  }
+
+  @param('uid', Types.Int)
+  @param('operation', Types.String)
+  async post(domainId: string, uid: number, operation: string) {
+    const udoc = await UserModel.getById(domainId, uid);
+    if (!udoc) throw new UserNotFoundError(uid);
+
+    const operatorUid = this.user._id;
+
+    if (operation === 'grant') {
+      // 奖励积分
+      const amount = parseInt(this.request.body.amount, 10);
+      const reason = (this.request.body.reason || '管理员发放积分').trim();
+      if (!amount || amount <= 0) throw new ValidationError('amount', '发放积分数值必须大于 0');
+
+      await db.collection('user').updateOne({ _id: uid }, { $inc: { points: amount } });
+
+      await db.collection('point_log').insertOne({
+        uid,
+        type: 'admin_grant',
+        amount,
+        net: amount,
+        reason,
+        operatorUid,
+        createdAt: new Date(),
+      });
+
+      try {
+        await MessageModel.send(
+          operatorUid || 1,
+          uid,
+          `🎁 管理员已为你发放 ${amount} 积分！\n理由：${reason}`
+        );
+      } catch (e) {}
+    } else if (operation === 'deduct') {
+      // 扣除积分
+      const amount = parseInt(this.request.body.amount, 10);
+      const reason = (this.request.body.reason || '管理员扣除积分').trim();
+      if (!amount || amount <= 0) throw new ValidationError('amount', '扣除积分数值必须大于 0');
+
+      const currentPoints = udoc.points || 0;
+      const actualDeduct = Math.min(currentPoints, amount);
+
+      await db.collection('user').updateOne({ _id: uid }, { $inc: { points: -actualDeduct } });
+
+      await db.collection('point_log').insertOne({
+        uid,
+        type: 'admin_deduct',
+        amount: -actualDeduct,
+        net: -actualDeduct,
+        reason,
+        operatorUid,
+        createdAt: new Date(),
+      });
+
+      try {
+        await MessageModel.send(
+          operatorUid || 1,
+          uid,
+          `⚠️ 管理员扣除了你的 ${actualDeduct} 积分。\n理由：${reason}`
+        );
+      } catch (e) {}
+    } else if (operation === 'setPoints') {
+      // 重置 / 设置指定积分
+      const targetPoints = parseInt(this.request.body.targetPoints, 10);
+      const reason = (this.request.body.reason || '管理员手动调整积分').trim();
+      if (isNaN(targetPoints) || targetPoints < 0) {
+        throw new ValidationError('targetPoints', '目标积分不能为负数');
+      }
+
+      const oldPoints = udoc.points || 0;
+      const diff = targetPoints - oldPoints;
+
+      await db.collection('user').updateOne({ _id: uid }, { $set: { points: targetPoints } });
+
+      await db.collection('point_log').insertOne({
+        uid,
+        type: 'admin_set',
+        amount: diff,
+        net: diff,
+        reason: `${reason} (由 ${oldPoints} 变更为 ${targetPoints})`,
+        operatorUid,
+        createdAt: new Date(),
+      });
+    } else if (operation === 'setPerk') {
+      // 调整特权道具
+      const perkType = this.request.body.perkType; // 'colorName' | 'doublePoints' | 'solitude'
+      const action = this.request.body.action;     // 'grant_days' | 'clear'
+      const days = parseInt(this.request.body.days || '1', 10);
+
+      const fieldMap: Record<string, string> = {
+        colorName: 'colorNameExpire',
+        doublePoints: 'doublePointsExpire',
+        solitude: 'solitudeExpire',
+      };
+      const perkNames: Record<string, string> = {
+        colorName: '彩色用户名',
+        doublePoints: '积分翻倍卡',
+        solitude: '自闭卡',
+      };
+
+      const field = fieldMap[perkType];
+      if (!field) throw new ValidationError('perkType', '无效的特权类型');
+
+      if (action === 'clear') {
+        await db.collection('user').updateOne({ _id: uid }, { $unset: { [field]: 1 } });
+        await db.collection('point_log').insertOne({
+          uid,
+          type: 'admin_perk_clear',
+          reason: `管理员移除了特权：${perkNames[perkType]}`,
+          operatorUid,
+          createdAt: new Date(),
+        });
+      } else {
+        if (isNaN(days) || days <= 0) throw new ValidationError('days', '天数必须大于 0');
+        const now = Date.now();
+        const currentExpire = udoc[field] ? new Date(udoc[field]).getTime() : 0;
+        const base = currentExpire > now ? currentExpire : now;
+        const newExpire = new Date(base + days * 24 * 60 * 60 * 1000);
+
+        await db.collection('user').updateOne({ _id: uid }, { $set: { [field]: newExpire } });
+        await db.collection('point_log').insertOne({
+          uid,
+          type: 'admin_perk_grant',
+          reason: `管理员赠送/延长特权：${perkNames[perkType]} (${days} 天)`,
+          expireAt: newExpire,
+          operatorUid,
+          createdAt: new Date(),
+        });
+      }
+    }
+
+    this.back();
+  }
+}
+
+/* ==========================================================================
+   插件入口 apply
+   ========================================================================== */
+
 export function apply(ctx: Context) {
-  // 注册路由
+  // 1. 注册前台商城路由
   ctx.Route('shop_page', '/shop', ShopHandler);
   ctx.Route('shop_buy_box', '/api/shop/buy_box', BuyBoxHandler);
   ctx.Route('shop_buy_color_name', '/api/shop/buy_color_name', BuyColorNameHandler);
@@ -285,7 +652,11 @@ export function apply(ctx: Context) {
   ctx.Route('shop_buy_solitude', '/api/shop/buy_solitude', BuySolitudeCardHandler);
   ctx.Route('shop_user_effect', '/api/shop/user_effect', UserEffectHandler);
 
-  // 注入导航栏下拉菜单
+  // 2. 注册控制面板管理路由 (限 PRIV_EDIT_SYSTEM 超管)
+  ctx.Route('points_manage_main', '/manage/points', PointsManageMainHandler, PRIV.PRIV_EDIT_SYSTEM);
+  ctx.Route('points_manage_detail', '/manage/points/:uid', PointsManageDetailHandler, PRIV.PRIV_EDIT_SYSTEM);
+
+  // 3. 注入顶部用户下拉菜单 & 控制面板侧边栏
   ctx.injectUI(
     'UserDropdown',
     'shop_page',
@@ -293,11 +664,37 @@ export function apply(ctx: Context) {
     PRIV.PRIV_USER_PROFILE
   );
 
-  // 索引初始化
+  ctx.injectUI(
+    'ControlPanel',
+    'points_manage_main',
+    { icon: 'crown', text: '积分管理' },
+    PRIV.PRIV_EDIT_SYSTEM
+  );
+
+  // 4. 国际化支持
+  ctx.i18n.load('zh', {
+    points_manage_main: '积分管理',
+    points_manage_detail: '积分管理详情',
+    'Points Management': '积分管理',
+    'User Points': '用户积分',
+  });
+
+  ctx.i18n.load('en', {
+    points_manage_main: 'Points Management',
+    points_manage_detail: 'Points Detail',
+    'Points Management': 'Points Management',
+    'User Points': 'User Points',
+  });
+
+  // 5. 索引初始化
   ctx.on('ready', async () => {
     try {
       await db.collection('point_log').createIndex(
         { uid: 1, domainId: 1, pid: 1, type: 1 },
+        { background: true }
+      );
+      await db.collection('point_log').createIndex(
+        { createdAt: -1 },
         { background: true }
       );
     } catch (e) {
@@ -305,21 +702,21 @@ export function apply(ctx: Context) {
     }
   });
 
-  // 拦截个人主页访问：自闭卡生效期间他人无法访问
+  // 6. 拦截个人主页访问：自闭卡生效期间他人无法访问
   ctx.on('handler/after/UserDetail', async (h) => {
     const targetUser = h.response.body?.udoc;
     if (!targetUser) return;
     const now = Date.now();
     const isSolitude = targetUser.solitudeExpire && new Date(targetUser.solitudeExpire).getTime() > now;
     if (isSolitude) {
-      // 访问者非本人时拦截
-      if (!h.user?._id || h.user._id !== targetUser._id) {
+      // 访问者非本人且不是超级管理员时拦截
+      if (!h.user?._id || (h.user._id !== targetUser._id && !h.user.hasPriv(PRIV.PRIV_EDIT_SYSTEM))) {
         throw new PermissionError('该用户正在自闭中，个人主页暂不可访问');
       }
     }
   });
 
-  // AC 奖励监听（包含翻倍卡判定）
+  // 7. AC 奖励监听（包含翻倍卡判定）
   ctx.on('record/judge', async (rdoc) => {
     try {
       if (!rdoc || !rdoc.uid || rdoc.uid <= 1) return;
@@ -341,7 +738,7 @@ export function apply(ctx: Context) {
       const now = Date.now();
       const isDouble = !!(udoc?.doublePointsExpire && new Date(udoc.doublePointsExpire).getTime() > now);
 
-      let rewardPoints = Math.floor(Math.random() * 91) + 10;
+      let rewardPoints = Math.floor(Math.random() * 91) + 10; // 10 ~ 100 分
       if (isDouble) {
         rewardPoints *= 2;
       }
@@ -368,7 +765,7 @@ export function apply(ctx: Context) {
       });
 
       try {
-        const doubleTip = isDouble ? '\n【积分翻倍卡生效中】奖励已翻倍⚡' : '';
+        const doubleTip = isDouble ? '\n【积分翻倍卡生效中】奖励已翻倍 ⚡' : '';
         await MessageModel.send(
           1,
           uid,

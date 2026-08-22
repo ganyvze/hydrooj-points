@@ -1,0 +1,412 @@
+{% extends "layout/basic.html" %}
+{% block content %}
+<style>
+.p-detail-container {
+  max-width: 1100px;
+  margin: 20px auto;
+  padding: 0 16px 50px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+.p-back-nav {
+  margin-bottom: 16px;
+}
+.p-back-nav a {
+  color: #4f46e5;
+  text-decoration: none;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.p-profile-card {
+  background: var(--card-bg, #ffffff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 16px;
+  padding: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  margin-bottom: 24px;
+}
+.p-user-meta h2 {
+  margin: 0 0 6px 0;
+  font-size: 22px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.p-user-meta p {
+  margin: 4px 0;
+  color: var(--text-secondary, #64748b);
+  font-size: 14px;
+}
+.p-user-points-banner {
+  text-align: right;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px 24px;
+}
+.p-user-points-banner .label {
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 500;
+}
+.p-user-points-banner .val {
+  font-size: 32px;
+  font-weight: 900;
+  color: #f59e0b;
+}
+
+.p-grid-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 20px;
+  margin-bottom: 24px;
+}
+.p-action-card {
+  background: var(--card-bg, #ffffff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
+}
+.p-action-card h3 {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.p-form-group {
+  margin-bottom: 14px;
+}
+.p-form-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 6px;
+}
+.p-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 9px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 14px;
+}
+.p-btn-submit {
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  color: #fff;
+  transition: opacity 0.2s;
+}
+.p-btn-green { background: #16a34a; }
+.p-btn-green:hover { background: #15803d; }
+.p-btn-red { background: #dc2626; }
+.p-btn-red:hover { background: #b91c1c; }
+.p-btn-blue { background: #4f46e5; }
+.p-btn-blue:hover { background: #4338ca; }
+.p-btn-gray { background: #475569; }
+.p-btn-gray:hover { background: #334155; }
+
+.p-perk-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+.p-perk-row:last-child { border-bottom: none; }
+
+.p-table-card {
+  background: var(--card-bg, #ffffff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.p-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  text-align: left;
+}
+.p-table th {
+  background: #f8fafc;
+  color: #64748b;
+  padding: 12px 16px;
+  font-weight: 600;
+  border-bottom: 1px solid #e2e8f0;
+}
+.p-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f1f5f9;
+}
+.p-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.p-amount-pos { color: #16a34a; font-weight: 700; }
+.p-amount-neg { color: #dc2626; font-weight: 700; }
+</style>
+
+<div class="p-detail-container">
+  <!-- 返回按钮 -->
+  <div class="p-back-nav">
+    <a href="/manage/points">⬅️ 返回积分用户列表</a>
+  </div>
+
+  <!-- 用户信息抬头卡片 -->
+  <div class="p-profile-card">
+    <div class="p-user-meta">
+      <h2>
+        <span>{{ udoc.uname }}</span>
+        <span style="font-size: 14px; color: #64748b; font-weight: normal;">(UID: #{{ udoc._id }})</span>
+      </h2>
+      <p>📧 电子邮箱：{{ udoc.mail or '未设置' }}</p>
+      <p>📅 注册时间：{{ moment(udoc.regat).format('YYYY-MM-DD HH:mm:ss') if udoc.regat else '-' }}</p>
+      <p>🕒 最后登录：{{ moment(udoc.loginat).format('YYYY-MM-DD HH:mm:ss') if udoc.loginat else '从未登录' }}</p>
+    </div>
+    <div class="p-user-points-banner">
+      <div class="label">当前可用积分</div>
+      <div class="val">{{ points }}</div>
+    </div>
+  </div>
+
+  <!-- 操作区域栅格 -->
+  <div class="p-grid-actions">
+    <!-- 1. 发放 / 扣除积分 -->
+    <div class="p-action-card">
+      <h3>🎁 奖励 / 扣除积分</h3>
+      <form method="post" action="/manage/points/{{ udoc._id }}" style="margin-bottom: 18px;">
+        <input type="hidden" name="operation" value="grant">
+        <div class="p-form-group">
+          <label>发放积分数量 (+)</label>
+          <input class="p-input" type="number" name="amount" min="1" placeholder="例如：100" required>
+        </div>
+        <div class="p-form-group">
+          <label>奖励理由（将同步通知用户）</label>
+          <input class="p-input" type="text" name="reason" placeholder="如：参加月赛表现优异" required>
+        </div>
+        <button type="submit" class="p-btn-submit p-btn-green">确认发放积分</button>
+      </form>
+
+      <hr style="border:none; border-top:1px dashed #e2e8f0; margin: 16px 0;">
+
+      <form method="post" action="/manage/points/{{ udoc._id }}">
+        <input type="hidden" name="operation" value="deduct">
+        <div class="p-form-group">
+          <label>扣除积分数量 (-)</label>
+          <input class="p-input" type="number" name="amount" min="1" placeholder="例如：50" required>
+        </div>
+        <div class="p-form-group">
+          <label>扣除理由（将同步通知用户）</label>
+          <input class="p-input" type="text" name="reason" placeholder="如：违规刷分撤销" required>
+        </div>
+        <button type="submit" class="p-btn-submit p-btn-red">确认扣除积分</button>
+      </form>
+    </div>
+
+    <!-- 2. 特权卡管理与重置 -->
+    <div class="p-action-card">
+      <h3>⚡ 特权道具管理</h3>
+      
+      <!-- 彩色名 -->
+      <div class="p-perk-row">
+        <div>
+          <div style="font-weight: 600;">🌈 彩色用户名</div>
+          <div style="font-size: 12px; color: #64748b;">
+            {% if perks.isColorName %}
+              <span style="color:#16a34a; font-weight:600;">生效中</span> (至 {{ moment(perks.colorNameExpire).format('YYYY-MM-DD HH:mm') }})
+            {% else %}
+              未激活
+            {% endif %}
+          </div>
+        </div>
+        <div style="display:flex; gap:6px;">
+          <form method="post" action="/manage/points/{{ udoc._id }}" style="display:inline;">
+            <input type="hidden" name="operation" value="setPerk">
+            <input type="hidden" name="perkType" value="colorName">
+            <input type="hidden" name="action" value="grant_days">
+            <input type="hidden" name="days" value="7">
+            <button class="p-btn-submit p-btn-blue" style="padding:4px 8px; font-size:12px;">+7天</button>
+          </form>
+          {% if perks.isColorName %}
+          <form method="post" action="/manage/points/{{ udoc._id }}" style="display:inline;">
+            <input type="hidden" name="operation" value="setPerk">
+            <input type="hidden" name="perkType" value="colorName">
+            <input type="hidden" name="action" value="clear">
+            <button class="p-btn-submit p-btn-red" style="padding:4px 8px; font-size:12px;">移除</button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- 翻倍卡 -->
+      <div class="p-perk-row">
+        <div>
+          <div style="font-weight: 600;">⚡ 积分翻倍卡</div>
+          <div style="font-size: 12px; color: #64748b;">
+            {% if perks.isDoublePoints %}
+              <span style="color:#d97706; font-weight:600;">生效中</span> (至 {{ moment(perks.doublePointsExpire).format('YYYY-MM-DD HH:mm') }})
+            {% else %}
+              未激活
+            {% endif %}
+          </div>
+        </div>
+        <div style="display:flex; gap:6px;">
+          <form method="post" action="/manage/points/{{ udoc._id }}" style="display:inline;">
+            <input type="hidden" name="operation" value="setPerk">
+            <input type="hidden" name="perkType" value="doublePoints">
+            <input type="hidden" name="action" value="grant_days">
+            <input type="hidden" name="days" value="7">
+            <button class="p-btn-submit p-btn-blue" style="padding:4px 8px; font-size:12px;">+7天</button>
+          </form>
+          {% if perks.isDoublePoints %}
+          <form method="post" action="/manage/points/{{ udoc._id }}" style="display:inline;">
+            <input type="hidden" name="operation" value="setPerk">
+            <input type="hidden" name="perkType" value="doublePoints">
+            <input type="hidden" name="action" value="clear">
+            <button class="p-btn-submit p-btn-red" style="padding:4px 8px; font-size:12px;">移除</button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- 自闭卡 -->
+      <div class="p-perk-row">
+        <div>
+          <div style="font-weight: 600;">🤐 自闭卡</div>
+          <div style="font-size: 12px; color: #64748b;">
+            {% if perks.isSolitude %}
+              <span style="color:#475569; font-weight:600;">生效中</span> (至 {{ moment(perks.solitudeExpire).format('YYYY-MM-DD HH:mm') }})
+            {% else %}
+              未激活
+            {% endif %}
+          </div>
+        </div>
+        <div style="display:flex; gap:6px;">
+          <form method="post" action="/manage/points/{{ udoc._id }}" style="display:inline;">
+            <input type="hidden" name="operation" value="setPerk">
+            <input type="hidden" name="perkType" value="solitude">
+            <input type="hidden" name="action" value="grant_days">
+            <input type="hidden" name="days" value="7">
+            <button class="p-btn-submit p-btn-blue" style="padding:4px 8px; font-size:12px;">+7天</button>
+          </form>
+          {% if perks.isSolitude %}
+          <form method="post" action="/manage/points/{{ udoc._id }}" style="display:inline;">
+            <input type="hidden" name="operation" value="setPerk">
+            <input type="hidden" name="perkType" value="solitude">
+            <input type="hidden" name="action" value="clear">
+            <button class="p-btn-submit p-btn-red" style="padding:4px 8px; font-size:12px;">移除</button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+
+      <hr style="border:none; border-top:1px dashed #e2e8f0; margin: 16px 0;">
+
+      <!-- 直接设定积分 -->
+      <form method="post" action="/manage/points/{{ udoc._id }}">
+        <input type="hidden" name="operation" value="setPoints">
+        <div class="p-form-group">
+          <label>强制重置用户积分至</label>
+          <input class="p-input" type="number" name="targetPoints" min="0" value="{{ points }}" required>
+        </div>
+        <div class="p-form-group">
+          <label>调整说明</label>
+          <input class="p-input" type="text" name="reason" placeholder="如：数据迁移核对调整">
+        </div>
+        <button type="submit" class="p-btn-submit p-btn-gray">设定积分</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- 该用户的积分流水明细 -->
+  <div class="p-action-card" style="padding:0; overflow:hidden;">
+    <div style="padding: 16px 20px; border-bottom: 1px solid #e2e8f0; font-weight:700; font-size:16px;">
+      📜 该用户的积分流水明细 (共 {{ logs.length }} 条)
+    </div>
+    <table class="p-table">
+      <thead>
+        <tr>
+          <th>发生时间</th>
+          <th>变动类型</th>
+          <th>积分变动</th>
+          <th>明细说明</th>
+          <th>操作人</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for l in logs %}
+        <tr>
+          <td style="color: #64748b; font-size: 13px;">{{ moment(l.createdAt).format('YYYY-MM-DD HH:mm:ss') }}</td>
+          <td>
+            {% if l.type == 'problem_ac' %}
+              <span class="p-badge" style="background:#ecfdf5; color:#059669;">题解 AC 奖励</span>
+            {% elif l.type == 'shop_mystery_box' %}
+              <span class="p-badge" style="background:#e0e7ff; color:#4338ca;">开启盲盒</span>
+            {% elif l.type == 'shop_buy_color_name' %}
+              <span class="p-badge" style="background:#fdf2f8; color:#db2777;">购买彩色名</span>
+            {% elif l.type == 'shop_buy_double_card' %}
+              <span class="p-badge" style="background:#fffbeb; color:#d97706;">购买翻倍卡</span>
+            {% elif l.type == 'shop_buy_solitude_card' %}
+              <span class="p-badge" style="background:#f1f5f9; color:#475569;">购买自闭卡</span>
+            {% elif l.type == 'admin_grant' %}
+              <span class="p-badge" style="background:#dcfce7; color:#15803d;">管理员发放</span>
+            {% elif l.type == 'admin_deduct' %}
+              <span class="p-badge" style="background:#fee2e2; color:#b91c1c;">管理员扣除</span>
+            {% elif l.type == 'admin_set' %}
+              <span class="p-badge" style="background:#fef3c7; color:#b45309;">管理员调整</span>
+            {% else %}
+              <span class="p-badge" style="background:#f1f5f9; color:#475569;">{{ l.type }}</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if l.amount and l.amount > 0 %}
+              <span class="p-amount-pos">+{{ l.amount }}</span>
+            {% elif l.amount and l.amount < 0 %}
+              <span class="p-amount-neg">{{ l.amount }}</span>
+            {% elif l.net and l.net > 0 %}
+              <span class="p-amount-pos">+{{ l.net }}</span>
+            {% elif l.net and l.net < 0 %}
+              <span class="p-amount-neg">{{ l.net }}</span>
+            {% elif l.cost %}
+              <span class="p-amount-neg">-{{ l.cost }}</span>
+            {% else %}
+              <span style="color:#64748b;">0</span>
+            {% endif %}
+          </td>
+          <td>
+            {{ l.reason or '-' }}
+            {% if l.isDouble %}<span class="p-badge" style="background:#fef3c7; color:#b45309; margin-left:6px;">⚡翻倍</span>{% endif %}
+          </td>
+          <td style="color: #64748b; font-size: 13px;">
+            {% if l.operatorUid %}
+              {{ opUserMap[l.operatorUid] or ('Admin#' + l.operatorUid) }}
+            {% else %}
+              系统自动
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="5" style="text-align:center; padding:30px; color:#94a3b8;">暂无流水记录</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
