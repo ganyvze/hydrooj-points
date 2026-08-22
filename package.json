@@ -1,0 +1,13 @@
+{
+  "name": "hydrooj-points",
+  "version": "1.0.0",
+  "description": "HydroOJ Points Plugin",
+  "main": "index.ts",
+  "peerDependencies": {
+    "hydrooj": "^4.0.0 || ^5.0.0"
+  },
+  "devDependencies": {
+    "hydrooj": "latest",
+    "typescript": "^5.0.0"
+  }
+}
