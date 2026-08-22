@@ -651,22 +651,6 @@ class PointsManageDetailHandler extends PointsManageHandler {
 
     this.back();
   }
-
-  // 兜底通用 post
-  @param('uid', Types.Int)
-  @param('operation', Types.String, true)
-  async post(domainId: string, uid: number, operation?: string) {
-    if (operation === 'grant') {
-      return await (this.postGrant as any)({ ...this.args, domainId, uid });
-    } else if (operation === 'deduct') {
-      return await (this.postDeduct as any)({ ...this.args, domainId, uid });
-    } else if (operation === 'setPoints') {
-      return await (this.postSetPoints as any)({ ...this.args, domainId, uid });
-    } else if (operation === 'setPerk') {
-      return await (this.postSetPerk as any)({ ...this.args, domainId, uid });
-    }
-    this.back();
-  }
 }
 
 /* ==========================================================================
