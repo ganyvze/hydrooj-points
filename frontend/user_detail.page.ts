@@ -4,24 +4,34 @@ import { addPage, NamedPage, AutoloadPage } from '@hydrooj/ui-default';
 // 1. 全局流光特效 CSS
 const STYLE_ID = 'hydro-points-rainbow-style';
 const rainbowCSS = `
+/* 循环平滑无缝滚动动画 */
 @keyframes hydroRainbowFlow {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  0% { background-position: 0% center; }
+  100% { background-position: -200% center; }
 }
+
 /* 强力覆盖个人主页用户名及子元素 */
 .hydro-rainbow-uname,
 .hydro-rainbow-uname * {
-  background: linear-gradient(135deg, #ef4444, #f59e0b, #10b981, #3b82f6, #ef4444) !important;
-  background-size: 300% 300% !important;
+  /* 水平紧凑四色渐变：红(0%) -> 黄(25%) -> 绿(50%) -> 蓝(75%) -> 红(100%) */
+  background: linear-gradient(
+    to right,
+    #ff3333 0%,
+    #ffb300 25%,
+    #00cc66 50%,
+    #0088ff 75%,
+    #ff3333 100%
+  ) !important;
+  background-size: 200% auto !important;
   -webkit-background-clip: text !important;
   -webkit-text-fill-color: transparent !important;
-  animation: hydroRainbowFlow 4s ease infinite !important;
+  animation: hydroRainbowFlow 3s linear infinite !important;
   font-weight: 800 !important;
   display: inline-block !important;
   text-shadow: none !important;
 }
-/* 炫彩名徽标标签 */
+
+/* 炫彩名徽标同步为水平四色渐变 */
 .hydro-rainbow-tag {
   display: inline-block !important;
   vertical-align: middle !important;
@@ -31,10 +41,10 @@ const rainbowCSS = `
   padding: 2px 8px !important;
   margin-left: 10px !important;
   border-radius: 12px !important;
-  background: linear-gradient(135deg, #ff007f, #7928ca) !important;
+  background: linear-gradient(to right, #ff3333, #ffb300, #00cc66, #0088ff) !important;
   color: #ffffff !important;
   -webkit-text-fill-color: #ffffff !important;
-  box-shadow: 0 2px 6px rgba(255, 0, 127, 0.35) !important;
+  box-shadow: 0 2px 6px rgba(0, 204, 102, 0.35) !important;
 }
 `;
 
