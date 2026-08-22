@@ -76,7 +76,6 @@ function rollMysteryBox(): number {
    前台：用户商城相关 Handler
    ========================================================================== */
 
-// 1. 商城主页
 class ShopHandler extends Handler {
   async get() {
     if (!this.user._id || this.user._id <= 1) {
@@ -94,7 +93,6 @@ class ShopHandler extends Handler {
   }
 }
 
-// 2. 盲盒购买
 class BuyBoxHandler extends Handler {
   async post() {
     const uid = this.user._id;
@@ -145,7 +143,6 @@ class BuyBoxHandler extends Handler {
   }
 }
 
-// 3. 购买彩色用户名
 class BuyColorNameHandler extends Handler {
   async post() {
     const uid = this.user._id;
@@ -198,7 +195,6 @@ class BuyColorNameHandler extends Handler {
   }
 }
 
-// 4. 购买积分翻倍卡
 class BuyDoubleCardHandler extends Handler {
   async post() {
     const uid = this.user._id;
@@ -245,7 +241,6 @@ class BuyDoubleCardHandler extends Handler {
   }
 }
 
-// 5. 购买自闭卡
 class BuySolitudeCardHandler extends Handler {
   async post() {
     const uid = this.user._id;
@@ -298,7 +293,6 @@ class BuySolitudeCardHandler extends Handler {
   }
 }
 
-// 6. 用户状态及特效查询 API
 class UserEffectHandler extends Handler {
   async get() {
     const targetUid = parseInt(this.request.query.uid as string, 10);
@@ -328,14 +322,12 @@ class UserEffectHandler extends Handler {
    后台：控制面板（超级管理员）积分管理 Handler
    ========================================================================== */
 
-// 权限基类
 class PointsManageHandler extends Handler {
   async prepare() {
     this.checkPriv(PRIV.PRIV_EDIT_SYSTEM);
   }
 }
 
-// 控制面板：积分管理列表与系统流水
 class PointsManageMainHandler extends PointsManageHandler {
   @param('page', Types.PositiveInt, true)
   @param('search', Types.String, true)
@@ -344,7 +336,6 @@ class PointsManageMainHandler extends PointsManageHandler {
   async get(domainId: string, page = 1, search = '', sort = 'points_desc', tab = 'users') {
     const limit = 20;
 
-    // 统计概览数据
     const totalPointsAgg = await db.collection('user').aggregate([
       { $group: { _id: null, total: { $sum: { $ifNull: ['$points', 0] } } } }
     ]).toArray();
@@ -362,7 +353,6 @@ class PointsManageMainHandler extends PointsManageHandler {
     const totalLogsCount = await db.collection('point_log').countDocuments();
 
     if (tab === 'logs') {
-      // 查看全站日志
       const query: any = {};
       if (search) {
         if (!isNaN(+search)) {
@@ -408,7 +398,6 @@ class PointsManageMainHandler extends PointsManageHandler {
       return;
     }
 
-    // 默认：查看用户列表
     const query: any = {};
     if (search) {
       const searchRegex = new RegExp(search, 'i');
@@ -455,7 +444,7 @@ class PointsManageMainHandler extends PointsManageHandler {
   }
 }
 
-// 控制面板：用户积分详情、流水与修改操作
+// 控制面板：用户积分详情、流水与修改操作（实现各 post[Operation] 分发方法）
 class PointsManageDetailHandler extends PointsManageHandler {
   @param('uid', Types.Int)
   @param('page', Types.PositiveInt, true)
@@ -504,137 +493,178 @@ class PointsManageDetailHandler extends PointsManageHandler {
     };
   }
 
+  // 1. 对应 operation=grant
   @param('uid', Types.Int)
-  @param('operation', Types.String)
-  async post(domainId: string, uid: number, operation: string) {
+  @param('amount', Types.Int)
+  @param('reason', Types.String, true)
+  async postGrant(domainId: string, uid: number, amount: number, reason = '管理员发放积分') {
+    if (!amount || amount <= 0) throw new ValidationError('amount', '发放积分数值必须大于 0');
     const udoc = await UserModel.getById(domainId, uid);
     if (!udoc) throw new UserNotFoundError(uid);
 
     const operatorUid = this.user._id;
+    reason = (reason || '管理员发放积分').trim();
 
-    if (operation === 'grant') {
-      // 奖励积分
-      const amount = parseInt(this.request.body.amount, 10);
-      const reason = (this.request.body.reason || '管理员发放积分').trim();
-      if (!amount || amount <= 0) throw new ValidationError('amount', '发放积分数值必须大于 0');
+    await db.collection('user').updateOne({ _id: uid }, { $inc: { points: amount } });
 
-      await db.collection('user').updateOne({ _id: uid }, { $inc: { points: amount } });
+    await db.collection('point_log').insertOne({
+      uid,
+      type: 'admin_grant',
+      amount,
+      net: amount,
+      reason,
+      operatorUid,
+      createdAt: new Date(),
+    });
 
+    try {
+      await MessageModel.send(
+        operatorUid || 1,
+        uid,
+        `🎁 管理员已为你发放 ${amount} 积分！\n理由：${reason}`
+      );
+    } catch (e) {}
+
+    this.back();
+  }
+
+  // 2. 对应 operation=deduct
+  @param('uid', Types.Int)
+  @param('amount', Types.Int)
+  @param('reason', Types.String, true)
+  async postDeduct(domainId: string, uid: number, amount: number, reason = '管理员扣除积分') {
+    if (!amount || amount <= 0) throw new ValidationError('amount', '扣除积分数值必须大于 0');
+    const udoc = await UserModel.getById(domainId, uid);
+    if (!udoc) throw new UserNotFoundError(uid);
+
+    const operatorUid = this.user._id;
+    reason = (reason || '管理员扣除积分').trim();
+
+    const currentPoints = udoc.points || 0;
+    const actualDeduct = Math.min(currentPoints, amount);
+
+    await db.collection('user').updateOne({ _id: uid }, { $inc: { points: -actualDeduct } });
+
+    await db.collection('point_log').insertOne({
+      uid,
+      type: 'admin_deduct',
+      amount: -actualDeduct,
+      net: -actualDeduct,
+      reason,
+      operatorUid,
+      createdAt: new Date(),
+    });
+
+    try {
+      await MessageModel.send(
+        operatorUid || 1,
+        uid,
+        `⚠️ 管理员扣除了你的 ${actualDeduct} 积分。\n理由：${reason}`
+      );
+    } catch (e) {}
+
+    this.back();
+  }
+
+  // 3. 对应 operation=setPoints
+  @param('uid', Types.Int)
+  @param('targetPoints', Types.Int)
+  @param('reason', Types.String, true)
+  async postSetPoints(domainId: string, uid: number, targetPoints: number, reason = '管理员手动调整积分') {
+    if (isNaN(targetPoints) || targetPoints < 0) {
+      throw new ValidationError('targetPoints', '目标积分不能为负数');
+    }
+    const udoc = await UserModel.getById(domainId, uid);
+    if (!udoc) throw new UserNotFoundError(uid);
+
+    const operatorUid = this.user._id;
+    reason = (reason || '管理员手动调整积分').trim();
+
+    const oldPoints = udoc.points || 0;
+    const diff = targetPoints - oldPoints;
+
+    await db.collection('user').updateOne({ _id: uid }, { $set: { points: targetPoints } });
+
+    await db.collection('point_log').insertOne({
+      uid,
+      type: 'admin_set',
+      amount: diff,
+      net: diff,
+      reason: `${reason} (由 ${oldPoints} 变更为 ${targetPoints})`,
+      operatorUid,
+      createdAt: new Date(),
+    });
+
+    this.back();
+  }
+
+  // 4. 对应 operation=setPerk
+  @param('uid', Types.Int)
+  @param('perkType', Types.String)
+  @param('action', Types.String)
+  @param('days', Types.Int, true)
+  async postSetPerk(domainId: string, uid: number, perkType: string, action: string, days = 1) {
+    const udoc = await UserModel.getById(domainId, uid);
+    if (!udoc) throw new UserNotFoundError(uid);
+
+    const operatorUid = this.user._id;
+    const fieldMap: Record<string, string> = {
+      colorName: 'colorNameExpire',
+      doublePoints: 'doublePointsExpire',
+      solitude: 'solitudeExpire',
+    };
+    const perkNames: Record<string, string> = {
+      colorName: '彩色用户名',
+      doublePoints: '积分翻倍卡',
+      solitude: '自闭卡',
+    };
+
+    const field = fieldMap[perkType];
+    if (!field) throw new ValidationError('perkType', '无效的特权类型');
+
+    if (action === 'clear') {
+      await db.collection('user').updateOne({ _id: uid }, { $unset: { [field]: 1 } });
       await db.collection('point_log').insertOne({
         uid,
-        type: 'admin_grant',
-        amount,
-        net: amount,
-        reason,
+        type: 'admin_perk_clear',
+        reason: `管理员移除了特权：${perkNames[perkType]}`,
         operatorUid,
         createdAt: new Date(),
       });
+    } else {
+      if (isNaN(days) || days <= 0) throw new ValidationError('days', '天数必须大于 0');
+      const now = Date.now();
+      const currentExpire = udoc[field] ? new Date(udoc[field]).getTime() : 0;
+      const base = currentExpire > now ? currentExpire : now;
+      const newExpire = new Date(base + days * 24 * 60 * 60 * 1000);
 
-      try {
-        await MessageModel.send(
-          operatorUid || 1,
-          uid,
-          `🎁 管理员已为你发放 ${amount} 积分！\n理由：${reason}`
-        );
-      } catch (e) {}
-    } else if (operation === 'deduct') {
-      // 扣除积分
-      const amount = parseInt(this.request.body.amount, 10);
-      const reason = (this.request.body.reason || '管理员扣除积分').trim();
-      if (!amount || amount <= 0) throw new ValidationError('amount', '扣除积分数值必须大于 0');
-
-      const currentPoints = udoc.points || 0;
-      const actualDeduct = Math.min(currentPoints, amount);
-
-      await db.collection('user').updateOne({ _id: uid }, { $inc: { points: -actualDeduct } });
-
+      await db.collection('user').updateOne({ _id: uid }, { $set: { [field]: newExpire } });
       await db.collection('point_log').insertOne({
         uid,
-        type: 'admin_deduct',
-        amount: -actualDeduct,
-        net: -actualDeduct,
-        reason,
+        type: 'admin_perk_grant',
+        reason: `管理员赠送/延长特权：${perkNames[perkType]} (${days} 天)`,
+        expireAt: newExpire,
         operatorUid,
         createdAt: new Date(),
       });
-
-      try {
-        await MessageModel.send(
-          operatorUid || 1,
-          uid,
-          `⚠️ 管理员扣除了你的 ${actualDeduct} 积分。\n理由：${reason}`
-        );
-      } catch (e) {}
-    } else if (operation === 'setPoints') {
-      // 重置 / 设置指定积分
-      const targetPoints = parseInt(this.request.body.targetPoints, 10);
-      const reason = (this.request.body.reason || '管理员手动调整积分').trim();
-      if (isNaN(targetPoints) || targetPoints < 0) {
-        throw new ValidationError('targetPoints', '目标积分不能为负数');
-      }
-
-      const oldPoints = udoc.points || 0;
-      const diff = targetPoints - oldPoints;
-
-      await db.collection('user').updateOne({ _id: uid }, { $set: { points: targetPoints } });
-
-      await db.collection('point_log').insertOne({
-        uid,
-        type: 'admin_set',
-        amount: diff,
-        net: diff,
-        reason: `${reason} (由 ${oldPoints} 变更为 ${targetPoints})`,
-        operatorUid,
-        createdAt: new Date(),
-      });
-    } else if (operation === 'setPerk') {
-      // 调整特权道具
-      const perkType = this.request.body.perkType; // 'colorName' | 'doublePoints' | 'solitude'
-      const action = this.request.body.action;     // 'grant_days' | 'clear'
-      const days = parseInt(this.request.body.days || '1', 10);
-
-      const fieldMap: Record<string, string> = {
-        colorName: 'colorNameExpire',
-        doublePoints: 'doublePointsExpire',
-        solitude: 'solitudeExpire',
-      };
-      const perkNames: Record<string, string> = {
-        colorName: '彩色用户名',
-        doublePoints: '积分翻倍卡',
-        solitude: '自闭卡',
-      };
-
-      const field = fieldMap[perkType];
-      if (!field) throw new ValidationError('perkType', '无效的特权类型');
-
-      if (action === 'clear') {
-        await db.collection('user').updateOne({ _id: uid }, { $unset: { [field]: 1 } });
-        await db.collection('point_log').insertOne({
-          uid,
-          type: 'admin_perk_clear',
-          reason: `管理员移除了特权：${perkNames[perkType]}`,
-          operatorUid,
-          createdAt: new Date(),
-        });
-      } else {
-        if (isNaN(days) || days <= 0) throw new ValidationError('days', '天数必须大于 0');
-        const now = Date.now();
-        const currentExpire = udoc[field] ? new Date(udoc[field]).getTime() : 0;
-        const base = currentExpire > now ? currentExpire : now;
-        const newExpire = new Date(base + days * 24 * 60 * 60 * 1000);
-
-        await db.collection('user').updateOne({ _id: uid }, { $set: { [field]: newExpire } });
-        await db.collection('point_log').insertOne({
-          uid,
-          type: 'admin_perk_grant',
-          reason: `管理员赠送/延长特权：${perkNames[perkType]} (${days} 天)`,
-          expireAt: newExpire,
-          operatorUid,
-          createdAt: new Date(),
-        });
-      }
     }
 
+    this.back();
+  }
+
+  // 兜底通用 post
+  @param('uid', Types.Int)
+  @param('operation', Types.String, true)
+  async post(domainId: string, uid: number, operation?: string) {
+    if (operation === 'grant') {
+      return await (this.postGrant as any)({ ...this.args, domainId, uid });
+    } else if (operation === 'deduct') {
+      return await (this.postDeduct as any)({ ...this.args, domainId, uid });
+    } else if (operation === 'setPoints') {
+      return await (this.postSetPoints as any)({ ...this.args, domainId, uid });
+    } else if (operation === 'setPerk') {
+      return await (this.postSetPerk as any)({ ...this.args, domainId, uid });
+    }
     this.back();
   }
 }
@@ -652,7 +682,7 @@ export function apply(ctx: Context) {
   ctx.Route('shop_buy_solitude', '/api/shop/buy_solitude', BuySolitudeCardHandler);
   ctx.Route('shop_user_effect', '/api/shop/user_effect', UserEffectHandler);
 
-  // 2. 注册控制面板管理路由 (限 PRIV_EDIT_SYSTEM 超管)
+  // 2. 注册控制面板管理路由
   ctx.Route('points_manage_main', '/manage/points', PointsManageMainHandler, PRIV.PRIV_EDIT_SYSTEM);
   ctx.Route('points_manage_detail', '/manage/points/:uid', PointsManageDetailHandler, PRIV.PRIV_EDIT_SYSTEM);
 
@@ -671,7 +701,7 @@ export function apply(ctx: Context) {
     PRIV.PRIV_EDIT_SYSTEM
   );
 
-  // 4. 国际化支持
+  // 4. 国际化
   ctx.i18n.load('zh', {
     points_manage_main: '积分管理',
     points_manage_detail: '积分管理详情',
@@ -702,21 +732,20 @@ export function apply(ctx: Context) {
     }
   });
 
-  // 6. 拦截个人主页访问：自闭卡生效期间他人无法访问
+  // 6. 拦截自闭卡主页访问
   ctx.on('handler/after/UserDetail', async (h) => {
     const targetUser = h.response.body?.udoc;
     if (!targetUser) return;
     const now = Date.now();
     const isSolitude = targetUser.solitudeExpire && new Date(targetUser.solitudeExpire).getTime() > now;
     if (isSolitude) {
-      // 访问者非本人且不是超级管理员时拦截
       if (!h.user?._id || (h.user._id !== targetUser._id && !h.user.hasPriv(PRIV.PRIV_EDIT_SYSTEM))) {
         throw new PermissionError('该用户正在自闭中，个人主页暂不可访问');
       }
     }
   });
 
-  // 7. AC 奖励监听（包含翻倍卡判定）
+  // 7. AC 奖励监听
   ctx.on('record/judge', async (rdoc) => {
     try {
       if (!rdoc || !rdoc.uid || rdoc.uid <= 1) return;
@@ -738,7 +767,7 @@ export function apply(ctx: Context) {
       const now = Date.now();
       const isDouble = !!(udoc?.doublePointsExpire && new Date(udoc.doublePointsExpire).getTime() > now);
 
-      let rewardPoints = Math.floor(Math.random() * 91) + 10; // 10 ~ 100 分
+      let rewardPoints = Math.floor(Math.random() * 91) + 10;
       if (isDouble) {
         rewardPoints *= 2;
       }
