@@ -1,4 +1,4 @@
-import { Context, STATUS, db, MessageModel, Handler, PermissionError, ProblemModel } from 'hydrooj';
+import { Context, STATUS, db, MessageModel, Handler, PermissionError, ProblemModel, PRIV } from 'hydrooj';
 
 const BOX_PRICE = 199;
 const COLOR_NAME_PRICE = 299; // 彩色用户名价格 (299积分/天)
@@ -86,7 +86,6 @@ class BuyColorNameHandler extends Handler {
     const uid = this.user._id;
     if (!uid || uid <= 1) throw new PermissionError('请先登录');
 
-    // 原子扣费
     const deductRes = await db.collection('user').updateOne(
       { _id: uid, points: { $gte: COLOR_NAME_PRICE } },
       { $inc: { points: -COLOR_NAME_PRICE } }
@@ -97,7 +96,6 @@ class BuyColorNameHandler extends Handler {
       return;
     }
 
-    // 计算到期时间（若已有生效时间则自动叠加 24 小时）
     const now = Date.now();
     const udoc = await db.collection('user').findOne({ _id: uid });
     let baseTime = now;
@@ -129,7 +127,7 @@ class BuyColorNameHandler extends Handler {
   }
 }
 
-// 4. 公开查询用户特效 API（用于个人主页判断）
+// 4. 用户特效查询 API
 class UserEffectHandler extends Handler {
   async get() {
     const targetUid = parseInt(this.request.query.uid as string, 10);
@@ -150,11 +148,19 @@ class UserEffectHandler extends Handler {
 }
 
 export function apply(ctx: Context) {
-  // 注册商城及特效路由
+  // 注册页面与 API 路由
   ctx.Route('shop_page', '/shop', ShopHandler);
   ctx.Route('shop_buy_box', '/api/shop/buy_box', BuyBoxHandler);
   ctx.Route('shop_buy_color_name', '/api/shop/buy_color_name', BuyColorNameHandler);
   ctx.Route('shop_user_effect', '/api/shop/user_effect', UserEffectHandler);
+
+  // ⭐ 使用官方标准 UI 注入点将积分商城添加到右上角用户下拉菜单
+  ctx.injectUI(
+    'UserDropdown',
+    'shop_page',
+    { icon: 'shopping_bag', displayName: '积分商城' },
+    PRIV.PRIV_USER_PROFILE
+  );
 
   // 索引初始化
   ctx.on('ready', async () => {
@@ -168,7 +174,7 @@ export function apply(ctx: Context) {
     }
   });
 
-  // AC 奖励逻辑
+  // AC 奖励监听
   ctx.on('record/judge', async (rdoc) => {
     try {
       if (!rdoc || !rdoc.uid || rdoc.uid <= 1) return;
@@ -204,7 +210,7 @@ export function apply(ctx: Context) {
         rid: rdoc._id,
         amount: rewardPoints,
         type: 'problem_ac',
-        reason: `首次通过题目 ${problemId} 奖励`,
+        reason: `首次通过题目 #${problemId} 奖励`,
         createdAt: new Date(),
       });
 
