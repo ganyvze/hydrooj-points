@@ -1,50 +1,123 @@
 {% extends "layout/basic.html" %}
 {% block content %}
 <style>
-/* ================= 全局扁平化设计变量与重置 ================= */
+/* ================= 1. 亮色 / 暗色 CSS 变量体系 ================= */
+:root {
+  --shop-bg-card: #ffffff;
+  --shop-bg-sub: #f8fafc;
+  --shop-border: #e2e8f0;
+  --shop-text-main: #0f172a;
+  --shop-text-sub: #64748b;
+  --shop-modal-bg: #ffffff;
+  --shop-modal-mask: rgba(15, 23, 42, 0.6);
+  --shop-btn-close: #0f172a;
+  --shop-btn-close-hover: #1e293b;
+  --shop-badge-gold-bg: #fef3c7;
+  --shop-badge-gold-text: #b45309;
+  --shop-badge-purple-bg: #f3e8ff;
+  --shop-badge-purple-text: #7e22ce;
+  --shop-badge-blue-bg: #e0e7ff;
+  --shop-badge-blue-text: #4338ca;
+  --shop-badge-gray-bg: #f1f5f9;
+  --shop-badge-gray-text: #475569;
+  --shop-banner-gradient: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+}
+
+/* 适配 Hydro 官方暗色主题类名 (html.theme--dark) 与系统暗色偏好 */
+html.theme--dark,
+.theme--dark,
+[data-theme="dark"],
+body.dark {
+  --shop-bg-card: #1e293b;
+  --shop-bg-sub: #0f172a;
+  --shop-border: #334155;
+  --shop-text-main: #f8fafc;
+  --shop-text-sub: #94a3b8;
+  --shop-modal-bg: #1e293b;
+  --shop-modal-mask: rgba(0, 0, 0, 0.75);
+  --shop-btn-close: #334155;
+  --shop-btn-close-hover: #475569;
+  --shop-badge-gold-bg: rgba(245, 158, 11, 0.2);
+  --shop-badge-gold-text: #fbbf24;
+  --shop-badge-purple-bg: rgba(168, 85, 247, 0.2);
+  --shop-badge-purple-text: #c084fc;
+  --shop-badge-blue-bg: rgba(99, 102, 241, 0.2);
+  --shop-badge-blue-text: #818cf8;
+  --shop-badge-gray-bg: rgba(148, 163, 184, 0.2);
+  --shop-badge-gray-text: #cbd5e1;
+  --shop-banner-gradient: linear-gradient(135deg, #3730a3 0%, #581c87 100%);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.theme--light):not([data-theme="light"]) {
+    --shop-bg-card: #1e293b;
+    --shop-bg-sub: #0f172a;
+    --shop-border: #334155;
+    --shop-text-main: #f8fafc;
+    --shop-text-sub: #94a3b8;
+    --shop-modal-bg: #1e293b;
+    --shop-modal-mask: rgba(0, 0, 0, 0.75);
+    --shop-btn-close: #334155;
+    --shop-btn-close-hover: #475569;
+    --shop-badge-gold-bg: rgba(245, 158, 11, 0.2);
+    --shop-badge-gold-text: #fbbf24;
+    --shop-badge-purple-bg: rgba(168, 85, 247, 0.2);
+    --shop-badge-purple-text: #c084fc;
+    --shop-badge-blue-bg: rgba(99, 102, 241, 0.2);
+    --shop-badge-blue-text: #818cf8;
+    --shop-badge-gray-bg: rgba(148, 163, 184, 0.2);
+    --shop-badge-gray-text: #cbd5e1;
+    --shop-banner-gradient: linear-gradient(135deg, #3730a3 0%, #581c87 100%);
+  }
+}
+
+/* ================= 2. 页面布局与卡片样式 ================= */
 .shop-wrapper {
   max-width: 1040px;
   margin: 24px auto;
   padding: 0 16px 60px 16px;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  color: #1e293b;
+  color: var(--shop-text-main);
+  transition: color 0.3s ease;
 }
 
-/* 顶部信息卡片 */
+/* 顶部信息栏 */
 .shop-header {
-  background: #ffffff;
+  background: var(--shop-bg-card);
   border-radius: 16px;
   padding: 24px 32px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--shop-border);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: background 0.3s ease, border-color 0.3s ease;
 }
 .shop-title h2 {
   margin: 0;
   font-size: 22px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--shop-text-main);
   display: flex;
   align-items: center;
   gap: 10px;
 }
 .shop-title p {
   margin: 6px 0 0 0;
-  color: #64748b;
+  color: var(--shop-text-sub);
   font-size: 14px;
 }
 .shop-balance {
   text-align: right;
-  background: #f8fafc;
+  background: var(--shop-bg-sub);
   padding: 10px 20px;
   border-radius: 12px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--shop-border);
+  transition: background 0.3s ease, border-color 0.3s ease;
 }
 .shop-balance .label {
   font-size: 12px;
-  color: #64748b;
+  color: var(--shop-text-sub);
   font-weight: 500;
 }
 .shop-balance .value {
@@ -53,7 +126,7 @@
   color: #f59e0b;
 }
 
-/* 商品卡片网格 */
+/* 商品网格 */
 .shop-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -63,21 +136,21 @@
 
 /* 扁平化商品卡片 */
 .product-card {
-  background: #ffffff;
+  background: var(--shop-bg-card);
   border-radius: 16px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--shop-border);
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.3s ease, border-color 0.3s ease;
   display: flex;
   flex-direction: column;
 }
 .product-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 12px 20px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 12px 20px rgba(0, 0, 0, 0.12);
 }
 .product-banner {
-  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  background: var(--shop-banner-gradient);
   padding: 40px 0;
   display: flex;
   justify-content: center;
@@ -92,7 +165,7 @@
   position: absolute;
   top: 12px;
   right: 12px;
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.2);
   backdrop-filter: blur(4px);
   color: #ffffff;
   font-size: 11px;
@@ -109,7 +182,7 @@
 .product-name {
   font-size: 18px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--shop-text-main);
   margin: 0;
 }
 .product-price {
@@ -120,7 +193,7 @@
 }
 .product-desc {
   font-size: 13px;
-  color: #64748b;
+  color: var(--shop-text-sub);
   line-height: 1.6;
   margin: 0 0 16px 0;
 }
@@ -140,24 +213,26 @@
   background: #4338ca;
 }
 .btn-buy:disabled {
-  background: #94a3b8;
+  background: #64748b;
   cursor: not-allowed;
+  opacity: 0.6;
 }
 
 /* 概率说明卡片 */
 .rules-card {
-  background: #ffffff;
+  background: var(--shop-bg-card);
   border-radius: 16px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--shop-border);
   padding: 24px;
   margin-top: 24px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: background 0.3s ease, border-color 0.3s ease;
 }
 .rules-card h3 {
   margin: 0 0 16px 0;
   font-size: 16px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--shop-text-main);
 }
 .rules-table {
   width: 100%;
@@ -165,17 +240,17 @@
   font-size: 14px;
 }
 .rules-table th {
-  background: #f8fafc;
-  color: #64748b;
+  background: var(--shop-bg-sub);
+  color: var(--shop-text-sub);
   font-weight: 600;
   padding: 10px 16px;
   text-align: left;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--shop-border);
 }
 .rules-table td {
   padding: 12px 16px;
-  border-bottom: 1px solid #f1f5f9;
-  color: #334155;
+  border-bottom: 1px solid var(--shop-border);
+  color: var(--shop-text-main);
 }
 .rules-table tr:last-child td {
   border-bottom: none;
@@ -187,30 +262,31 @@
   font-size: 12px;
   font-weight: 600;
 }
-.badge-gold { background: #fef3c7; color: #b45309; }
-.badge-purple { background: #f3e8ff; color: #7e22ce; }
-.badge-blue { background: #e0e7ff; color: #4338ca; }
-.badge-gray { background: #f1f5f9; color: #475569; }
+.badge-gold { background: var(--shop-badge-gold-bg); color: var(--shop-badge-gold-text); }
+.badge-purple { background: var(--shop-badge-purple-bg); color: var(--shop-badge-purple-text); }
+.badge-blue { background: var(--shop-badge-blue-bg); color: var(--shop-badge-blue-text); }
+.badge-gray { background: var(--shop-badge-gray-bg); color: var(--shop-badge-gray-text); }
 
 /* 独立弹窗 (Modal) */
 .shop-modal-mask {
   display: none;
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(15, 23, 42, 0.6);
+  background: var(--shop-modal-mask);
   backdrop-filter: blur(4px);
   z-index: 9999;
   align-items: center;
   justify-content: center;
 }
 .shop-modal-box {
-  background: #ffffff;
+  background: var(--shop-modal-bg);
   border-radius: 20px;
   width: 90%;
   max-width: 360px;
   padding: 32px 24px;
   text-align: center;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--shop-border);
   animation: popIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 @keyframes popIn {
@@ -220,8 +296,8 @@
 .spinner {
   width: 44px;
   height: 44px;
-  border: 4px solid #e2e8f0;
-  border-top-color: #4f46e5;
+  border: 4px solid var(--shop-border);
+  border-top-color: #6366f1;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
   margin: 0 auto 16px auto;
@@ -236,19 +312,23 @@
 }
 .result-msg {
   font-size: 14px;
-  color: #64748b;
+  color: var(--shop-text-sub);
   margin-bottom: 24px;
 }
 .btn-close {
   width: 100%;
   padding: 10px 0;
-  background: #0f172a;
+  background: var(--shop-btn-close);
   color: #ffffff;
-  border: none;
+  border: 1px solid var(--shop-border);
   border-radius: 10px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
+  transition: background 0.2s ease;
+}
+.btn-close:hover {
+  background: var(--shop-btn-close-hover);
 }
 </style>
 
@@ -340,13 +420,13 @@
 <!-- 开箱独立弹窗 -->
 <div class="shop-modal-mask" id="lottery-modal">
   <div class="shop-modal-box">
-    <!-- 加载中动画 -->
+    <!-- 加载中状态 -->
     <div id="modal-loading">
       <div class="spinner"></div>
-      <div style="font-weight: 600; color: #475569;">正在开启盲盒...</div>
+      <div style="font-weight: 600; color: var(--shop-text-main);">正在开启盲盒...</div>
     </div>
 
-    <!-- 结果展示 -->
+    <!-- 结果展示状态 -->
     <div id="modal-result" style="display: none;">
       <div style="font-size: 40px;" id="res-icon">🎉</div>
       <div class="result-val" id="res-points">+0</div>
@@ -375,7 +455,7 @@ function handleOpenBox() {
   btn.disabled = true;
   btn.innerText = '正在开启...';
 
-  // 打开弹窗并处于 Loading 状态
+  // 显示弹窗并处于加载状态
   const modal = document.getElementById('lottery-modal');
   const loadingDiv = document.getElementById('modal-loading');
   const resultDiv = document.getElementById('modal-result');
@@ -399,7 +479,6 @@ function handleOpenBox() {
         document.getElementById('res-points').innerText = '开启失败';
         document.getElementById('res-desc').innerText = data.error;
       } else {
-        // 更新页面积分
         document.getElementById('user-points-val').innerText = data.userPoints;
 
         const reward = data.reward;
@@ -419,11 +498,11 @@ function handleOpenBox() {
           resDescElem.innerText = '运气不错，保本并小赚一笔！';
         } else if (reward > 0) {
           resIconElem.innerText = '🪙';
-          resPtsElem.style.color = '#64748b';
+          resPtsElem.style.color = '#94a3b8';
           resDescElem.innerText = '回血一波，再接再厉！';
         } else {
           resIconElem.innerText = '💨';
-          resPtsElem.style.color = '#94a3b8';
+          resPtsElem.style.color = '#64748b';
           resDescElem.innerText = '空空如也，下次一定出金！';
         }
       }
