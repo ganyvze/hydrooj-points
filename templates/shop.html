@@ -478,7 +478,7 @@ body.dark {
     <div class="product-card">
       <div class="product-banner banner-rename">
         <span class="product-tag">✏️ 身份焕新</span>
-        <div class="icon">🪪</div>
+        <div class="icon">📝</div>
       </div>
       <div class="product-body">
         <h3 class="product-name">改名卡</h3>
@@ -922,7 +922,7 @@ function handleBuyRenameCard() {
       showModalResult('❌', '改名失败', data.error, '#ef4444');
     } else {
       document.getElementById('user-points-val').innerText = data.userPoints;
-      showModalResult('🪪', '改名成功！', `你的新用户名是：${data.uname}`, '#7c3aed');
+      showModalResult('✔', '改名成功！', `你的新用户名是：${data.uname}`, '#7c3aed');
     }
     processing = false;
     btn.disabled = false;
