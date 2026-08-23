@@ -24,7 +24,6 @@ declare module 'hydrooj' {
     doublePointsExpire?: Date;
     solitudeExpire?: Date;
     easterEggExpire?: Date;
-    renameCardExpire?: Date;
   }
   interface Collections {
     point_log: PointLogDoc;
@@ -55,7 +54,6 @@ const COLOR_NAME_PRICE = 299;    // 彩色用户名价格 (299积分/天)
 const DOUBLE_CARD_PRICE = 399;   // 积分翻倍卡价格 (399积分/24小时)
 const SOLITUDE_CARD_PRICE = 199; // 自闭卡价格 (199积分/24小时)
 const EASTER_EGG_PRICE = 99;    // 彩蛋价格 (99积分/24小时)
-const RENAME_CARD_PRICE = 599;   // 改名卡价格 (599积分/次)
 
 const BOX_PRIZES = [
   { points: 1999, weight: 10 },
@@ -357,7 +355,6 @@ class UserEffectHandler extends Handler {
         isSolitude: false,
         isDoublePoints: false,
         isEasterEgg: false,
-        isRenameCard: false,
       };
       return;
     }
@@ -368,116 +365,16 @@ class UserEffectHandler extends Handler {
     const isSolitude = !!(udoc?.solitudeExpire && new Date(udoc.solitudeExpire).getTime() > now);
     const isDoublePoints = !!(udoc?.doublePointsExpire && new Date(udoc.doublePointsExpire).getTime() > now);
     const isEasterEgg = !!(udoc?.easterEggExpire && new Date(udoc.easterEggExpire).getTime() > now);
-    const isRenameCard = !!(udoc?.renameCardExpire && new Date(udoc.renameCardExpire).getTime() > now);
 
     this.response.body = {
       isColorName,
       isSolitude,
       isDoublePoints,
       isEasterEgg,
-      isRenameCard,
       expireAt: udoc?.colorNameExpire || null,
       solitudeExpire: udoc?.solitudeExpire || null,
       doublePointsExpire: udoc?.doublePointsExpire || null,
       easterEggExpire: udoc?.easterEggExpire || null,
-      renameCardExpire: udoc?.renameCardExpire || null,
-    };
-  }
-}
-
-class BuyRenameCardHandler extends Handler {
-  async post() {
-    const uid = this.user._id;
-    if (!uid || uid <= 1) throw new PermissionError('请先登录');
-
-    const deductRes = await db.collection('user').updateOne(
-      { _id: uid, points: { $gte: RENAME_CARD_PRICE } },
-      { $inc: { points: -RENAME_CARD_PRICE } }
-    );
-
-    if (deductRes.matchedCount === 0) {
-      this.response.body = { error: `积分不足 ${RENAME_CARD_PRICE}，无法兑换` };
-      return;
-    }
-
-    await db.collection('point_log').insertOne({
-      uid,
-      type: 'shop_buy_rename_card',
-      cost: RENAME_CARD_PRICE,
-      createdAt: new Date(),
-    });
-
-    const updatedUser = await db.collection('user').findOne({ _id: uid });
-    this.response.body = {
-      success: true,
-      userPoints: updatedUser?.points || 0,
-      renameCardPurchased: true,
-    };
-  }
-}
-
-class SetUnameHandler extends Handler {
-  async post() {
-    const uid = this.user._id;
-    if (!uid || uid <= 1) throw new PermissionError('请先登录');
-
-    const { uname } = this.request.body;
-    if (!uname || typeof uname !== 'string') {
-      this.response.body = { error: '用户名不能为空' };
-      return;
-    }
-
-    // 检查用户名长度
-    if (uname.length < 3 || uname.length > 20) {
-      this.response.body = { error: '用户名长度必须在3-20个字符之间' };
-      return;
-    }
-
-    // 检查用户名格式
-    const usernameRegex = /^[a-zA-Z0-9_-]+$/;
-    if (!usernameRegex.test(uname)) {
-      this.response.body = { error: '用户名只能包含字母、数字、下划线和连字符' };
-      return;
-    }
-
-    // 检查用户是否有改名卡权限
-    const udoc = await db.collection('user').findOne({ _id: uid });
-    const now = Date.now();
-    const hasRenameCard = !!(udoc?.renameCardExpire && new Date(udoc.renameCardExpire).getTime() > now);
-
-    if (!hasRenameCard) {
-      this.response.body = { error: '你没有改名卡权限，请先购买改名卡' };
-      return;
-    }
-
-    // 检查用户名是否已被使用
-    const existingUser = await UserModel.getByUname(this.domain, uname);
-    if (existingUser && existingUser._id !== uid) {
-      this.response.body = { error: '该用户名已被使用' };
-      return;
-    }
-
-    // 更新用户名
-    await UserModel.setUname(uid, uname);
-
-    // 清除改名卡权限（一次性使用）
-    await db.collection('user').updateOne(
-      { _id: uid },
-      { $unset: { renameCardExpire: 1 } }
-    );
-
-    // 记录改名日志
-    await db.collection('point_log').insertOne({
-      uid,
-      type: 'user_rename',
-      reason: `使用改名卡修改用户名从 ${udoc.uname} 到 ${uname}`,
-      createdAt: new Date(),
-    });
-
-    this.response.body = {
-      success: true,
-      message: '用户名修改成功',
-      newUsername: uname,
     };
   }
 }
@@ -637,7 +534,6 @@ class PointsManageDetailHandler extends PointsManageHandler {
     const isDoublePoints = !!(udoc.doublePointsExpire && new Date(udoc.doublePointsExpire).getTime() > now);
     const isSolitude = !!(udoc.solitudeExpire && new Date(udoc.solitudeExpire).getTime() > now);
     const isEasterEgg = !!(udoc.easterEggExpire && new Date(udoc.easterEggExpire).getTime() > now);
-    const isRenameCard = !!(udoc.renameCardExpire && new Date(udoc.renameCardExpire).getTime() > now);
 
     this.response.template = 'points_manage_detail.html';
     this.response.body = {
@@ -652,8 +548,6 @@ class PointsManageDetailHandler extends PointsManageHandler {
         solitudeExpire: udoc.solitudeExpire,
         isEasterEgg,
         easterEggExpire: udoc.easterEggExpire,
-        isRenameCard,
-        renameCardExpire: udoc.renameCardExpire,
       },
       logs,
       opUserMap,
@@ -784,14 +678,12 @@ class PointsManageDetailHandler extends PointsManageHandler {
       doublePoints: 'doublePointsExpire',
       solitude: 'solitudeExpire',
       easterEgg: 'easterEggExpire',
-      renameCard: 'renameCardExpire',
     };
     const perkNames: Record<string, string> = {
       colorName: '彩色用户名',
       doublePoints: '积分翻倍卡',
       solitude: '自闭卡',
       easterEgg: '彩蛋',
-      renameCard: '改名卡',
     };
 
     const field = fieldMap[perkType];
@@ -840,9 +732,7 @@ export function apply(ctx: Context) {
   ctx.Route('shop_buy_double_card', '/api/shop/buy_double_card', BuyDoubleCardHandler);
   ctx.Route('shop_buy_solitude', '/api/shop/buy_solitude', BuySolitudeCardHandler);
   ctx.Route('shop_buy_easter_egg', '/api/shop/buy_easter_egg', BuyEasterEggHandler);
-  ctx.Route('shop_buy_rename_card', '/api/shop/buy_rename_card', BuyRenameCardHandler);
   ctx.Route('shop_user_effect', '/api/shop/user_effect', UserEffectHandler);
-  ctx.Route('user_set_uname', '/api/user/set_uname', SetUnameHandler);
 
   // 2. 注册控制面板管理路由
   ctx.Route('points_manage_main', '/manage/points', PointsManageMainHandler, PRIV.PRIV_EDIT_SYSTEM);
