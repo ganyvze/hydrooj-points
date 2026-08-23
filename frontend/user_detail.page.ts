@@ -77,6 +77,22 @@ const effectCSS = `
   -webkit-text-fill-color: #ffffff !important;
   box-shadow: 0 2px 6px rgba(13, 148, 136, 0.35) !important;
 }
+
+/* 🔄 改名卡徽标 */
+.hydro-rename-tag {
+  display: inline-block !important;
+  vertical-align: middle !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  line-height: 1.4 !important;
+  padding: 2px 8px !important;
+  margin-left: 10px !important;
+  border-radius: 12px !important;
+  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%) !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  box-shadow: 0 2px 6px rgba(139, 92, 246, 0.35) !important;
+}
 `;
 
 function injectEffectCSS() {
@@ -222,6 +238,13 @@ function applyUserEffects() {
             $target.append('<span class="hydro-rainbow-tag">🌈 炫彩名</span>');
           }
         }
+
+        // 改名卡生效状态展示
+        if (data.isRenameCard) {
+          if (!$target.find('.hydro-rename-tag').length && !$target.next('.hydro-rename-tag').length) {
+            $target.append('<span class="hydro-rename-tag">🔄 改名卡</span>');
+          }
+        }
       })
       .catch(() => {});
   }
@@ -230,6 +253,12 @@ function applyUserEffects() {
 // 4. 注册到 HydroOJ 官方生命周期
 addPage(new NamedPage(['user_detail'], () => {
   applyUserEffects();
+}));
+
+// 5. 注册改名功能页面
+addPage(new NamedPage(['user_rename'], () => {
+  // 改名功能页面逻辑将在这里实现
+  console.log('Rename page loaded');
 }));
 
 addPage(new AutoloadPage('hydro_points_global', () => {

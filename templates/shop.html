@@ -172,6 +172,9 @@ body.dark {
 .banner-egg {
   background: linear-gradient(135deg, #0d9488 0%, #0284c7 100%);
 }
+.banner-rename {
+  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+}
 
 .product-tag {
   position: absolute;
@@ -207,6 +210,7 @@ body.dark {
 .price-slate { color: #64748b; }
 .price-indigo { color: #6366f1; }
 .price-teal { color: #0d9488; }
+.price-purple { color: #8b5cf6; }
 
 .product-desc {
   font-size: 13px;
@@ -236,6 +240,8 @@ body.dark {
 .btn-buy.slate:hover { background: #1e293b; }
 .btn-buy.teal { background: #0d9488; }
 .btn-buy.teal:hover { background: #0f766e; }
+.btn-buy.purple { background: #8b5cf6; }
+.btn-buy.purple:hover { background: #7c3aed; }
 .btn-buy:disabled {
   background: #64748b;
   cursor: not-allowed;
@@ -463,6 +469,24 @@ body.dark {
           ~
         </p>
         <button class="btn-buy teal" id="btn-buy-egg" onclick="handleBuyEasterEgg()">
+          立即兑换
+        </button>
+      </div>
+    </div>
+
+    <!-- 6. 改名卡 -->
+    <div class="product-card">
+      <div class="product-banner banner-rename">
+        <span class="product-tag">🔄 一键改名</span>
+        <div class="icon">🔄</div>
+      </div>
+      <div class="product-body">
+        <h3 class="product-name">改名卡（一次性）</h3>
+        <div class="product-price price-purple">599 积分 / 次</div>
+        <p class="product-desc">
+          购买后可修改用户名，修改方式请参考用户管理功能
+        </p>
+        <button class="btn-buy purple" id="btn-buy-rename" onclick="handleBuyRenameCard()">
           立即兑换
         </button>
       </div>
@@ -845,6 +869,52 @@ function handleBuyEasterEgg() {
         document.getElementById('user-points-val').innerText = data.userPoints;
         const expireDate = new Date(data.easterEggExpire).toLocaleString();
         showModalResult('🥚', '彩蛋已激活！', `有效期至：${expireDate}`, '#0d9488');
+      }
+      processing = false;
+      btn.disabled = false;
+      btn.innerText = '立即兑换';
+    }, 600);
+  })
+  .catch(() => {
+    alert('网络异常，请重试');
+    closeModal();
+    processing = false;
+    btn.disabled = false;
+    btn.innerText = '立即兑换';
+  });
+}
+
+// 6. 兑换改名卡
+function handleBuyRenameCard() {
+  if (processing) return;
+  const currentPts = parseInt(document.getElementById('user-points-val').innerText, 10) || 0;
+  if (currentPts < 599) {
+    alert('积分不足，快去 AC 题目赚取积分吧！');
+    return;
+  }
+
+  if (!confirm('购买改名卡后，你将获得修改用户名的权限。确定要花费599积分购买改名卡吗？')) {
+    return;
+  }
+
+  processing = true;
+  const btn = document.getElementById('btn-buy-rename');
+  btn.disabled = true;
+  btn.innerText = '正在兑换...';
+  showModalLoading('正在激活改名卡...');
+
+  fetch('/api/shop/buy_rename_card', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  })
+  .then(res => res.json())
+  .then(data => {
+    setTimeout(() => {
+      if (data.error) {
+        showModalResult('❌', '兑换失败', data.error, '#ef4444');
+      } else {
+        document.getElementById('user-points-val').innerText = data.userPoints;
+        showModalResult('🔄', '改名卡已激活！', '现在你可以前往用户管理页面修改用户名', '#8b5cf6');
       }
       processing = false;
       btn.disabled = false;
