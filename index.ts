@@ -54,6 +54,7 @@ const COLOR_NAME_PRICE = 299;    // 彩色用户名价格 (299积分/天)
 const DOUBLE_CARD_PRICE = 399;   // 积分翻倍卡价格 (399积分/24小时)
 const SOLITUDE_CARD_PRICE = 199; // 自闭卡价格 (199积分/24小时)
 const EASTER_EGG_PRICE = 99;    // 彩蛋价格 (99积分/24小时)
+const RENAME_CARD_PRICE = 599;  // 改名卡价格 (599积分/次)
 
 const BOX_PRIZES = [
   { points: 1999, weight: 10 },
@@ -339,6 +340,65 @@ class BuyEasterEggHandler extends Handler {
       success: true,
       userPoints: updatedUser?.points || 0,
       easterEggExpire: expireAt,
+    };
+  }
+}
+
+class BuyRenameCardHandler extends Handler {
+  @param('uname', Types.Username)
+  async post(domainId: string, uname: string) {
+    const uid = this.user._id;
+    if (!uid || uid <= 1) throw new PermissionError('请先登录');
+
+    const udoc = await UserModel.getById(domainId, uid);
+    if (!udoc) throw new UserNotFoundError(uid);
+
+    if (uname === udoc.uname) {
+      this.response.body = { error: '新用户名不能与当前用户名相同' };
+      return;
+    }
+
+    // 与用户管理插件一致：先检查用户名唯一性，再通过 UserModel 更新用户名。
+    const existing = await UserModel.getByUname(domainId, uname);
+    if (existing && existing._id !== uid) {
+      this.response.body = { error: '用户名已被使用，请换一个' };
+      return;
+    }
+
+    const deductRes = await db.collection('user').updateOne(
+      { _id: uid, points: { $gte: RENAME_CARD_PRICE } },
+      { $inc: { points: -RENAME_CARD_PRICE } }
+    );
+
+    if (deductRes.matchedCount === 0) {
+      this.response.body = { error: `积分不足 ${RENAME_CARD_PRICE}，无法兑换改名卡` };
+      return;
+    }
+
+    try {
+      await UserModel.setUname(uid, uname);
+    } catch (error) {
+      // 用户名在校验后被其他用户抢先使用，或更新失败时，退回本次扣除的积分。
+      await db.collection('user').updateOne(
+        { _id: uid },
+        { $inc: { points: RENAME_CARD_PRICE } }
+      );
+      throw error;
+    }
+
+    await db.collection('point_log').insertOne({
+      uid,
+      type: 'shop_buy_rename_card',
+      cost: RENAME_CARD_PRICE,
+      reason: `用户名由 ${udoc.uname} 修改为 ${uname}`,
+      createdAt: new Date(),
+    });
+
+    const updatedUser = await db.collection('user').findOne({ _id: uid });
+    this.response.body = {
+      success: true,
+      userPoints: updatedUser?.points || 0,
+      uname,
     };
   }
 }
@@ -732,6 +792,7 @@ export function apply(ctx: Context) {
   ctx.Route('shop_buy_double_card', '/api/shop/buy_double_card', BuyDoubleCardHandler);
   ctx.Route('shop_buy_solitude', '/api/shop/buy_solitude', BuySolitudeCardHandler);
   ctx.Route('shop_buy_easter_egg', '/api/shop/buy_easter_egg', BuyEasterEggHandler);
+  ctx.Route('shop_buy_rename_card', '/api/shop/buy_rename_card', BuyRenameCardHandler);
   ctx.Route('shop_user_effect', '/api/shop/user_effect', UserEffectHandler);
 
   // 2. 注册控制面板管理路由

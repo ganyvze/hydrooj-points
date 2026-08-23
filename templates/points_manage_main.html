@@ -505,6 +505,8 @@ body.dark {
               <span class="p-badge p-badge-solitude">兑换自闭卡</span>
             {% elif l.type == 'shop_buy_easter_egg' %}
               <span class="p-badge p-badge-egg">兑换彩蛋</span>
+            {% elif l.type == 'shop_buy_rename_card' %}
+              <span class="p-badge" style="background:rgba(124, 58, 237, 0.2); color:#a78bfa;">兑换改名卡</span>
             {% elif l.type == 'admin_grant' %}
               <span class="p-badge" style="background:var(--p-badge-admin-bg); color:var(--p-badge-admin-text);">管理员发放</span>
             {% elif l.type == 'admin_deduct' %}

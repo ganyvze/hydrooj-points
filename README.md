@@ -10,6 +10,7 @@
 - **积分翻倍卡** - 399积分/天，24小时内所有积分获取翻倍
 - **自闭卡** - 199积分/天，24小时内禁止他人访问个人主页
 - **彩蛋** - 99积分/天
+- **改名卡** - 599积分/次，可修改为未被占用的新用户名
 
 ### 🎯 自动积分奖励
 - **题目AC奖励** - 首次通过题目获得10-100随机积分
@@ -81,6 +82,10 @@ cd /root/.hydro/addons && git clone https://github.com/ganyvze/hydrooj-points &&
 
 **彩蛋**
 - 消耗：99积分/天
+
+**改名卡**
+- 消耗：599积分/次
+- 效果：将用户名修改为新名称
 
 ### 管理员功能
 
@@ -172,6 +177,7 @@ const COLOR_NAME_PRICE = 299;    // 彩色用户名价格
 const DOUBLE_CARD_PRICE = 399;   // 积分翻倍卡价格
 const SOLITUDE_CARD_PRICE = 199; // 自闭卡价格
 const EASTER_EGG_PRICE = 99;    // 彩蛋价格
+const RENAME_CARD_PRICE = 599;  // 改名卡价格
 ```
 
 ### 奖励概率配置
