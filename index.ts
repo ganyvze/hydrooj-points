@@ -125,14 +125,8 @@ class BuyBoxHandler extends Handler {
       return;
     }
 
-    let reward = rollMysteryBox();
-    const udoc = await db.collection('user').findOne({ _id: uid });
-    const now = Date.now();
-    const isDouble = !!(udoc?.doublePointsExpire && new Date(udoc.doublePointsExpire).getTime() > now);
-
-    if (isDouble && reward > 0) {
-      reward *= 2;
-    }
+    // 盲盒奖励独立随机计算，不再受翻倍卡影响
+    const reward = rollMysteryBox();
 
     if (reward > 0) {
       await db.collection('user').updateOne(
@@ -146,7 +140,7 @@ class BuyBoxHandler extends Handler {
       type: 'shop_mystery_box',
       cost: BOX_PRICE,
       reward,
-      isDouble,
+      isDouble: false,
       net: reward - BOX_PRICE,
       createdAt: new Date(),
     });
@@ -154,7 +148,7 @@ class BuyBoxHandler extends Handler {
     const updatedUser = await db.collection('user').findOne({ _id: uid });
     this.response.body = {
       reward,
-      isDouble,
+      isDouble: false,
       userPoints: updatedUser?.points || 0,
     };
   }
