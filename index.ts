@@ -86,7 +86,17 @@ class ShopHandler extends Handler {
       this.response.redirect = '/login';
       return;
     }
-    const udoc = await db.collection('user').findOne({ _id: this.user._id });
+    const uid = this.user._id;
+    const udoc = await db.collection('user').findOne({ _id: uid });
+
+    // 查询当前用户的最近 30 条积分流水记录（按时间倒序）
+    const logs = await db
+      .collection('point_log')
+      .find({ uid })
+      .sort({ createdAt: -1 })
+      .limit(30)
+      .toArray();
+
     this.response.template = 'shop.html';
     this.response.body = {
       userPoints: udoc?.points || 0,
@@ -94,6 +104,8 @@ class ShopHandler extends Handler {
       doublePointsExpire: udoc?.doublePointsExpire || null,
       solitudeExpire: udoc?.solitudeExpire || null,
       easterEggExpire: udoc?.easterEggExpire || null,
+      logs,    // 注入个人变动记录
+      moment,  // 注入时间格式化函数
     };
   }
 }
@@ -915,16 +927,6 @@ export function apply(ctx: Context) {
         createdAt: new Date(),
       });
 
-      try {
-        const doubleTip = isDouble ? '\n【积分翻倍卡生效中】奖励已翻倍 ⚡' : '';
-        await MessageModel.send(
-          1,
-          uid,
-          `🎉 恭喜你通过题目 ${problemDisplay} ！${doubleTip}\n已为你发放 ${rewardPoints} 积分奖励！`
-        );
-      } catch (msgErr) {
-        console.warn('[Points Plugin] 发送积分通知失败:', msgErr);
-      }
     } catch (err) {
       console.error('[Points Plugin] 处理积分奖励异常:', err);
     }
